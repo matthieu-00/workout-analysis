@@ -232,8 +232,8 @@ export default function WorkoutPlanner() {
   return (
     <div className="max-w-6xl mx-auto p-6 bg-gray-100 min-h-screen">
       <div className="bg-white rounded-lg shadow-lg border border-gray-300 p-6 mb-8">
-        <h1 className="text-3xl font-bold text-black mb-4">Workout Planner</h1>
-        <p className="text-gray-700">Track your fitness journey • {exerciseDB.length} exercises available</p>
+        <h1 className="text-3xl font-bold text-black mb-4">Workout Analysis</h1>
+        <p className="text-gray-700">Analyze your fitness journey • {exerciseDB.length} exercises available!</p>
       </div>
 
       {/* Tab Navigation */}
@@ -442,8 +442,6 @@ export default function WorkoutPlanner() {
               </div>
 
               <div className="mb-8">
-                <h3 className="text-lg font-semibold text-black mb-6">Exercises</h3>
-                
                 {/* Added exercises - shown first, right below search */}
                 {currentWorkout.exercises.length > 0 && (
                   <div className="mb-8 space-y-4">
@@ -528,6 +526,9 @@ export default function WorkoutPlanner() {
 
                 {/* Always-visible search bar */}
                 <div className="mb-8 p-6 bg-gray-50 rounded-lg border border-gray-200 overflow-x-hidden">
+                  <div className="border-t-2 border-b-2 border-gray-400 py-3 mb-4">
+                    <h4 className="text-xs font-semibold text-black uppercase tracking-wide">Search</h4>
+                  </div>
                   <input
                     type="text"
                     placeholder="Search exercises..."
@@ -535,23 +536,28 @@ export default function WorkoutPlanner() {
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full max-w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-black focus:border-black box-border"
                   />
-                  <div className="flex gap-3 mb-6 flex-wrap">
-                    {categories.map(cat => (
-                      <button
-                        key={cat}
-                        onClick={() => setSelectedCategory(cat)}
-                        className={`px-4 py-2 rounded-full text-sm transition active:scale-95 cursor-pointer ${
-                          selectedCategory === cat
-                            ? 'bg-black text-white border-2 border-black'
-                            : 'bg-white text-black hover:bg-gray-100 border-2 border-gray-300'
-                        }`}
-                      >
-                        {cat}
-                      </button>
-                    ))}
+                  <div className="mb-6">
+                    <div className="flex items-center gap-4 flex-wrap">
+                      <span className="text-sm font-medium text-black">Filters:</span>
+                      {categories.map(cat => (
+                        <button
+                          key={cat}
+                          onClick={() => setSelectedCategory(cat)}
+                          className={`px-4 py-2 rounded-full text-sm transition active:scale-95 cursor-pointer ${
+                            selectedCategory === cat
+                              ? 'bg-black text-white border-2 border-black'
+                              : 'bg-white text-black hover:bg-gray-100 border-2 border-gray-300'
+                          }`}
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                   {filteredExercises.length > 0 && (
-                    <div className="max-h-60 overflow-y-auto space-y-4">
+                    <>
+                      <h3 className="text-lg font-semibold text-black mb-4">Exercises</h3>
+                      <div className="max-h-60 overflow-y-auto space-y-4">
                       {filteredExercises.slice(0, 50).map((ex, idx) => (
                         <ExercisePickerCard
                           key={`${ex.name}-${ex.category}-${idx}`}
@@ -559,10 +565,14 @@ export default function WorkoutPlanner() {
                           onAdd={() => addExercise(ex)}
                         />
                       ))}
-                    </div>
+                      </div>
+                    </>
                   )}
                   {filteredExercises.length === 0 && searchTerm && (
-                    <p className="text-center text-gray-500 py-8">No exercises found</p>
+                    <>
+                      <h3 className="text-lg font-semibold text-black mb-4">Exercises</h3>
+                      <p className="text-center text-gray-500 py-8">No exercises found</p>
+                    </>
                   )}
                   {!searchTerm && (
                     <p className="text-center text-gray-500 py-8 text-sm">Start typing to search for exercises</p>

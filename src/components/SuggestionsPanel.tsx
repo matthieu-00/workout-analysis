@@ -1,0 +1,201 @@
+import { useState } from 'react';
+import { Suggestion, Exercise } from '../types/workout';
+import { Plus, ChevronDown, ChevronUp, Info } from 'lucide-react';
+
+interface SuggestionsPanelProps {
+  suggestions: Suggestion[];
+  onAddExercise?: (exercise: Exercise) => void;
+}
+
+export default function SuggestionsPanel({ suggestions, onAddExercise }: SuggestionsPanelProps) {
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [expandedExercises, setExpandedExercises] = useState<Map<string, boolean>>(new Map());
+
+  const toggleGroup = (muscleGroup: string) => {
+    const newExpanded = new Set(expandedGroups);
+    if (newExpanded.has(muscleGroup)) {
+      newExpanded.delete(muscleGroup);
+    } else {
+      newExpanded.add(muscleGroup);
+    }
+    setExpandedGroups(newExpanded);
+  };
+
+  const toggleExercises = (muscleGroup: string) => {
+    const newExpanded = new Map(expandedExercises);
+    newExpanded.set(muscleGroup, !newExpanded.get(muscleGroup));
+    setExpandedExercises(newExpanded);
+  };
+
+  if (suggestions.length === 0) {
+    return (
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <h3 className="text-xl font-semibold text-gray-800 mb-4">Exercise Suggestions</h3>
+        <div className="text-center py-8 text-gray-500">
+          <p>Great job! All major muscle groups have been worked in the last week.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-lg shadow-md p-6">
+      <h3 className="text-xl font-semibold text-gray-800 mb-4">Exercise Suggestions</h3>
+      <p className="text-sm text-gray-600 mb-4">
+        These muscle groups haven't been worked in the last week. Consider adding these exercises:
+      </p>
+      
+      <div className="space-y-4">
+        {suggestions.map((suggestion) => {
+          const isGroupExpanded = expandedGroups.has(suggestion.muscleGroup);
+          const showAllExercises = expandedExercises.get(suggestion.muscleGroup) || false;
+          const initialExercises = suggestion.exercises.slice(0, 3);
+          const remainingExercises = suggestion.exercises.slice(3);
+          const hasMore = remainingExercises.length > 0;
+
+          return (
+            <div
+              key={suggestion.muscleGroup}
+              className="border border-gray-200 rounded-lg overflow-hidden"
+            >
+              <button
+                onClick={() => toggleGroup(suggestion.muscleGroup)}
+                className="w-full p-4 bg-gray-50 hover:bg-gray-100 transition flex justify-between items-center"
+              >
+                <div className="text-left">
+                  <h4 className="font-semibold text-gray-800 capitalize">
+                    {suggestion.muscleGroup}
+                  </h4>
+                  <p className="text-sm text-gray-600 mt-1">{suggestion.reason}</p>
+                </div>
+                {isGroupExpanded ? (
+                  <ChevronUp className="text-gray-600" size={20} />
+                ) : (
+                  <ChevronDown className="text-gray-600" size={20} />
+                )}
+              </button>
+
+              {isGroupExpanded && (
+                <div className="p-4 bg-white">
+                  <div className="space-y-3">
+                    {initialExercises.map((exercise, idx) => (
+                      <ExerciseCard
+                        key={idx}
+                        exercise={exercise}
+                        onAdd={onAddExercise}
+                      />
+                    ))}
+                    
+                    {hasMore && (
+                      <>
+                        {showAllExercises && (
+                          <div className="space-y-3 mt-3">
+                            {remainingExercises.map((exercise, idx) => (
+                              <ExerciseCard
+                                key={idx + 3}
+                                exercise={exercise}
+                                onAdd={onAddExercise}
+                              />
+                            ))}
+                          </div>
+                        )}
+                        <button
+                          onClick={() => toggleExercises(suggestion.muscleGroup)}
+                          className="w-full text-sm text-blue-600 hover:text-blue-800 font-medium py-2 flex items-center justify-center gap-1"
+                        >
+                          {showAllExercises ? (
+                            <>
+                              <ChevronUp size={16} />
+                              Show Less
+                            </>
+                          ) : (
+                            <>
+                              <ChevronDown size={16} />
+                              Show {remainingExercises.length} More Exercises
+                            </>
+                          )}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+interface ExerciseCardProps {
+  exercise: Exercise;
+  onAdd?: (exercise: Exercise) => void;
+}
+
+function ExerciseCard({ exercise, onAdd }: ExerciseCardProps) {
+  const [showInstructions, setShowInstructions] = useState(false);
+
+  return (
+    <div className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
+      <div className="flex items-start justify-between p-3">
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <h5 className="font-medium text-gray-800">{exercise.name}</h5>
+            {exercise.instructions && exercise.instructions.length > 0 && (
+              <button
+                onClick={() => setShowInstructions(!showInstructions)}
+                className="p-1 text-gray-500 hover:text-blue-600 transition"
+                title="Show instructions"
+              >
+                <Info size={14} />
+              </button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2 mt-1">
+            <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">
+              {exercise.category}
+            </span>
+            {exercise.equipment && (
+              <span className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded">
+                {exercise.equipment}
+              </span>
+            )}
+          </div>
+          <div className="mt-2">
+            <p className="text-xs text-gray-600">
+              <span className="font-medium">Primary:</span>{' '}
+              {exercise.primaryMuscles.join(', ') || 'N/A'}
+            </p>
+            {exercise.secondaryMuscles.length > 0 && (
+              <p className="text-xs text-gray-600">
+                <span className="font-medium">Secondary:</span>{' '}
+                {exercise.secondaryMuscles.join(', ')}
+              </p>
+            )}
+          </div>
+        </div>
+        {onAdd && (
+          <button
+            onClick={() => onAdd(exercise)}
+            className="ml-3 p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition"
+            title="Add to workout"
+          >
+            <Plus size={18} />
+          </button>
+        )}
+      </div>
+      {showInstructions && exercise.instructions && exercise.instructions.length > 0 && (
+        <div className="px-3 pb-3 pt-2 bg-white border-t border-gray-200">
+          <p className="text-xs font-semibold text-gray-700 mb-2">Instructions:</p>
+          <ol className="list-decimal list-inside space-y-1">
+            {exercise.instructions.map((instruction, idx) => (
+              <li key={idx} className="text-xs text-gray-600">{instruction}</li>
+            ))}
+          </ol>
+        </div>
+      )}
+    </div>
+  );
+}
+

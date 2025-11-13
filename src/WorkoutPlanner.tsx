@@ -1,87 +1,209 @@
-import { useState, useEffect } from 'react';
-import { Dumbbell, Calendar, Clock, TrendingUp, RefreshCw } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Calendar, Plus, X, ChevronDown, ChevronUp, Trash2, Loader, BarChart3, Activity, Info } from 'lucide-react';
+import { Workout, Exercise, WorkoutExercise, TimePeriod } from './types/workout';
+import { analyzeMuscleGroups, getUnderworkedMuscles, generateSuggestions } from './utils/workoutAnalysis';
+import BodyHeatmap from './components/BodyHeatmap';
+import SuggestionsPanel from './components/SuggestionsPanel';
 
-interface Exercise {
-  id: string;
-  name: string;
-  category: string;
-  sets?: number;
-  reps?: number;
-  duration?: string;
-  difficulty?: string;
+// Exercise picker card component with instructions
+function ExercisePickerCard({ exercise, onAdd }: { exercise: Exercise; onAdd: () => void }) {
+  const [showInstructions, setShowInstructions] = useState(false);
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      <div
+        onClick={onAdd}
+        className="p-3 hover:bg-blue-50 cursor-pointer transition"
+      >
+        <div className="flex justify-between items-start">
+          <div className="flex-1">
+            <p className="font-medium text-gray-800">{exercise.name}</p>
+            <p className="text-sm text-gray-600">{exercise.category} • {exercise.equipment || 'N/A'}</p>
+            <p className="text-xs text-gray-500 mt-1">
+              Primary: {exercise.primaryMuscles.join(', ') || 'N/A'}
+            </p>
+          </div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowInstructions(!showInstructions);
+            }}
+            className="ml-2 p-1 text-gray-500 hover:text-blue-600 transition"
+            title="Show instructions"
+          >
+            <Info size={16} />
+          </button>
+        </div>
+      </div>
+      {showInstructions && exercise.instructions && exercise.instructions.length > 0 && (
+        <div className="px-3 pb-3 pt-2 bg-gray-50 border-t border-gray-200">
+          <p className="text-xs font-semibold text-gray-700 mb-2">Instructions:</p>
+          <ol className="list-decimal list-inside space-y-1">
+            {exercise.instructions.map((instruction, idx) => (
+              <li key={idx} className="text-xs text-gray-600">{instruction}</li>
+            ))}
+          </ol>
+        </div>
+      )}
+    </div>
+  );
 }
 
-const WorkoutPlanner = () => {
-  const [exercises, setExercises] = useState<Exercise[]>([]);
+type ViewMode = 'workouts' | 'analysis';
+
+export default function WorkoutPlanner() {
+  const [workouts, setWorkouts] = useState<Workout[]>([]);
+  const [currentWorkout, setCurrentWorkout] = useState<Workout | null>(null);
+  const [showExercisePicker, setShowExercisePicker] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [expandedWorkout, setExpandedWorkout] = useState<number | null>(null);
+  const [exerciseDB, setExerciseDB] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedExercises, setSelectedExercises] = useState<Exercise[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [viewMode, setViewMode] = useState<ViewMode>('workouts');
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>(7);
 
-  // URL to a sample JSON gist with exercise data
-  const EXERCISES_URL = 'https://gist.githubusercontent.com/matthieu-00/example/raw/exercises.json';
-
+  // Fetch exercises from GitHub Gist on component mount
   useEffect(() => {
+    const fetchExercises = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('https://gist.githubusercontent.com/matthieu-00/3862e0aa8b88fe5352677a83e0b4a438/raw/37fb90968748be8a094707fd4ee2bff68e613f68/workout_list');
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch exercises');
+        }
+        
+        const data = await response.json();
+        
+        // Filter out stretching and cardio categories
+        const filteredData = data.filter((ex: Exercise) => 
+          ex.category !== 'stretching' && ex.category !== 'cardio'
+        );
+        
+        setExerciseDB(filteredData);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching exercises:', err);
+        setError('Failed to load exercise database. Please refresh the page.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchExercises();
   }, []);
 
-  const fetchExercises = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      // For demo purposes, using mock data if the gist doesn't exist
-      // In production, replace with actual gist URL
-      const mockData: Exercise[] = [
-        { id: '1', name: 'Push-ups', category: 'Upper Body', sets: 3, reps: 15, difficulty: 'Beginner' },
-        { id: '2', name: 'Squats', category: 'Lower Body', sets: 3, reps: 20, difficulty: 'Beginner' },
-        { id: '3', name: 'Plank', category: 'Core', duration: '60s', difficulty: 'Beginner' },
-        { id: '4', name: 'Burpees', category: 'Full Body', sets: 3, reps: 10, difficulty: 'Intermediate' },
-        { id: '5', name: 'Mountain Climbers', category: 'Core', sets: 3, reps: 20, difficulty: 'Intermediate' },
-        { id: '6', name: 'Pull-ups', category: 'Upper Body', sets: 3, reps: 8, difficulty: 'Advanced' },
-        { id: '7', name: 'Lunges', category: 'Lower Body', sets: 3, reps: 15, difficulty: 'Beginner' },
-        { id: '8', name: 'Deadlifts', category: 'Lower Body', sets: 4, reps: 8, difficulty: 'Advanced' },
-      ];
-
-      // Try to fetch from gist, fallback to mock data
+  useEffect(() => {
+    const saved = localStorage.getItem('workoutPlanner');
+    if (saved) {
       try {
-        const response = await fetch(EXERCISES_URL);
-        if (response.ok) {
-          const data = await response.json();
-          setExercises(data.exercises || data);
-        } else {
-          setExercises(mockData);
-        }
-      } catch {
-        // Use mock data if fetch fails
-        setExercises(mockData);
+        const data = JSON.parse(saved);
+        setWorkouts(data.workouts || []);
+      } catch (err) {
+        console.error('Error loading saved workouts:', err);
       }
-    } catch (err) {
-      setError('Failed to load exercises');
-      console.error(err);
-    } finally {
-      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (workouts.length > 0) {
+      localStorage.setItem('workoutPlanner', JSON.stringify({ workouts }));
+    }
+  }, [workouts]);
+
+  const startNewWorkout = () => {
+    setCurrentWorkout({
+      id: Date.now(),
+      date: new Date().toISOString().split('T')[0],
+      exercises: []
+    });
+  };
+
+  const addExercise = (exercise: Exercise) => {
+    if (currentWorkout) {
+      const workoutExercise: WorkoutExercise = {
+        ...exercise,
+        sets: [{ reps: 10, weight: 0 }]
+      };
+      setCurrentWorkout({
+        ...currentWorkout,
+        exercises: [...currentWorkout.exercises, workoutExercise]
+      });
+      setShowExercisePicker(false);
+      setSearchTerm('');
     }
   };
 
-  const addToWorkout = (exercise: Exercise) => {
-    if (!selectedExercises.find(e => e.id === exercise.id)) {
-      setSelectedExercises([...selectedExercises, exercise]);
+  const updateSet = (exerciseIndex: number, setIndex: number, field: 'reps' | 'weight', value: string) => {
+    if (!currentWorkout) return;
+    
+    const updated = { ...currentWorkout };
+    const numValue = field === 'reps' ? parseInt(value) || 0 : parseFloat(value) || 0;
+    updated.exercises[exerciseIndex].sets[setIndex][field] = numValue;
+    setCurrentWorkout(updated);
+  };
+
+  const addSet = (exerciseIndex: number) => {
+    if (!currentWorkout) return;
+    
+    const updated = { ...currentWorkout };
+    const lastSet = updated.exercises[exerciseIndex].sets.slice(-1)[0];
+    updated.exercises[exerciseIndex].sets.push({ ...lastSet });
+    setCurrentWorkout(updated);
+  };
+
+  const saveWorkout = () => {
+    if (currentWorkout && currentWorkout.exercises.length > 0) {
+      setWorkouts([...workouts, currentWorkout]);
+      setCurrentWorkout(null);
     }
   };
 
-  const removeFromWorkout = (exerciseId: string) => {
-    setSelectedExercises(selectedExercises.filter(e => e.id !== exerciseId));
+  const deleteWorkout = (id: number) => {
+    setWorkouts(workouts.filter(w => w.id !== id));
   };
 
-  const clearWorkout = () => {
-    setSelectedExercises([]);
-  };
+  const categories = useMemo(() => {
+    return ['all', ...new Set(exerciseDB.map(e => e.category).filter(Boolean))];
+  }, [exerciseDB]);
+
+  const filteredExercises = useMemo(() => {
+    return exerciseDB.filter(ex => {
+      const matchesSearch = ex.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = selectedCategory === 'all' || ex.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [exerciseDB, searchTerm, selectedCategory]);
+
+  // Analysis calculations
+  const muscleStats = useMemo(() => {
+    return analyzeMuscleGroups(workouts, timePeriod);
+  }, [workouts, timePeriod]);
+
+  const underworkedMuscles = useMemo(() => {
+    return getUnderworkedMuscles(muscleStats);
+  }, [muscleStats]);
+
+  const suggestions = useMemo(() => {
+    if (underworkedMuscles.length === 0) return [];
+    return generateSuggestions(underworkedMuscles, exerciseDB, 5);
+  }, [underworkedMuscles, exerciseDB]);
+
+  // Check if we have enough data for analysis
+  const hasAnalysisData = useMemo(() => {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - timePeriod);
+    return workouts.some(w => new Date(w.date) >= cutoffDate);
+  }, [workouts, timePeriod]);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="max-w-6xl mx-auto p-6 bg-gray-50 min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <RefreshCw className="w-12 h-12 mx-auto mb-4 text-indigo-600 animate-spin" />
-          <p className="text-gray-600">Loading exercises...</p>
+          <Loader className="animate-spin text-blue-600 mx-auto mb-4" size={48} />
+          <p className="text-gray-600">Loading exercise database...</p>
         </div>
       </div>
     );
@@ -89,137 +211,350 @@ const WorkoutPlanner = () => {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="text-center bg-white p-8 rounded-lg shadow-lg">
-          <p className="text-red-600 mb-4">{error}</p>
-          <button
-            onClick={fetchExercises}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-          >
-            Retry
-          </button>
+      <div className="max-w-6xl mx-auto p-6 bg-gray-50 min-h-screen flex items-center justify-center">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+          <p className="text-red-800 font-semibold mb-2">Error Loading Exercises</p>
+          <p className="text-red-600">{error}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center mb-4">
-            <Dumbbell className="w-12 h-12 text-indigo-600 mr-3" />
-            <h1 className="text-4xl font-bold text-gray-800">Workout Planner</h1>
-          </div>
-          <p className="text-gray-600">Build your custom workout routine</p>
-        </div>
+    <div className="max-w-6xl mx-auto p-6 bg-gray-50 min-h-screen">
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h1 className="text-3xl font-bold text-gray-800 mb-2">Workout Planner</h1>
+        <p className="text-gray-600">Track your fitness journey • {exerciseDB.length} exercises available</p>
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Exercise Library */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h2 className="text-2xl font-semibold text-gray-800 mb-4 flex items-center">
-                <TrendingUp className="w-6 h-6 mr-2 text-indigo-600" />
-                Exercise Library
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {exercises.map((exercise) => (
-                  <div
-                    key={exercise.id}
-                    className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-semibold text-lg text-gray-800">{exercise.name}</h3>
-                      <span className={`text-xs px-2 py-1 rounded-full ${
-                        exercise.difficulty === 'Beginner' ? 'bg-green-100 text-green-800' :
-                        exercise.difficulty === 'Intermediate' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {exercise.difficulty}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-3">{exercise.category}</p>
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm text-gray-500">
-                        {exercise.sets && exercise.reps && `${exercise.sets} sets × ${exercise.reps} reps`}
-                        {exercise.duration && `Duration: ${exercise.duration}`}
+      {/* Tab Navigation */}
+      <div className="flex gap-2 mb-6">
+        <button
+          onClick={() => setViewMode('workouts')}
+          className={`flex-1 py-3 px-4 rounded-lg font-medium transition flex items-center justify-center gap-2 ${
+            viewMode === 'workouts'
+              ? 'bg-blue-600 text-white'
+              : 'bg-white text-gray-700 hover:bg-gray-100'
+          }`}
+        >
+          <Activity size={20} />
+          Workouts
+        </button>
+        <button
+          onClick={() => setViewMode('analysis')}
+          className={`flex-1 py-3 px-4 rounded-lg font-medium transition flex items-center justify-center gap-2 ${
+            viewMode === 'analysis'
+              ? 'bg-blue-600 text-white'
+              : 'bg-white text-gray-700 hover:bg-gray-100'
+          }`}
+        >
+          <BarChart3 size={20} />
+          Analysis
+        </button>
+      </div>
+
+      {viewMode === 'workouts' ? (
+        <>
+          {!currentWorkout ? (
+            <>
+              <button
+                onClick={startNewWorkout}
+                className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg mb-6 flex items-center justify-center gap-2 hover:bg-blue-700 transition"
+              >
+                <Plus size={20} />
+                Start New Workout
+              </button>
+
+              <div className="space-y-4">
+                {workouts.length === 0 && (
+                  <div className="bg-white rounded-lg shadow-md p-8 text-center text-gray-500">
+                    <p>No workouts yet. Start your first workout above!</p>
+                  </div>
+                )}
+                {workouts.map(workout => (
+                  <div key={workout.id} className="bg-white rounded-lg shadow-md overflow-hidden">
+                    <div 
+                      className="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50"
+                      onClick={() => setExpandedWorkout(expandedWorkout === workout.id ? null : workout.id)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Calendar className="text-blue-600" size={20} />
+                        <div>
+                          <p className="font-semibold text-gray-800">
+                            {new Date(workout.date).toLocaleDateString('en-US', { 
+                              weekday: 'long', 
+                              year: 'numeric', 
+                              month: 'long', 
+                              day: 'numeric' 
+                            })}
+                          </p>
+                          <p className="text-sm text-gray-600">{workout.exercises.length} exercises</p>
+                        </div>
                       </div>
-                      <button
-                        onClick={() => addToWorkout(exercise)}
-                        disabled={selectedExercises.some(e => e.id === exercise.id)}
-                        className={`px-3 py-1 text-sm rounded-lg transition-colors ${
-                          selectedExercises.some(e => e.id === exercise.id)
-                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                            : 'bg-indigo-600 text-white hover:bg-indigo-700'
-                        }`}
-                      >
-                        {selectedExercises.some(e => e.id === exercise.id) ? 'Added' : 'Add'}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteWorkout(workout.id);
+                          }}
+                          className="text-red-600 hover:text-red-800 p-2"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                        {expandedWorkout === workout.id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                      </div>
                     </div>
+                    
+                    {expandedWorkout === workout.id && (
+                      <div className="p-4 bg-gray-50 border-t">
+                        {workout.exercises.map((exercise, idx) => (
+                          <SavedExerciseCard key={idx} exercise={exercise} />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
-            </div>
-          </div>
+            </>
+          ) : (
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Workout Date</label>
+                <input
+                  type="date"
+                  value={currentWorkout.date}
+                  onChange={(e) => setCurrentWorkout({ ...currentWorkout, date: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
 
-          {/* Workout Plan */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-lg p-6 sticky top-8">
-              <h2 className="text-2xl font-semibold text-gray-800 mb-4 flex items-center">
-                <Calendar className="w-6 h-6 mr-2 text-indigo-600" />
-                Your Workout
-              </h2>
-              
-              {selectedExercises.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <Clock className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                  <p>No exercises selected yet</p>
-                  <p className="text-sm mt-2">Add exercises from the library</p>
+              <div className="mb-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold text-gray-800">Exercises</h3>
+                  <button
+                    onClick={() => setShowExercisePicker(!showExercisePicker)}
+                    className="bg-blue-600 text-white py-2 px-4 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition"
+                  >
+                    <Plus size={16} />
+                    Add Exercise
+                  </button>
                 </div>
-              ) : (
-                <>
-                  <div className="space-y-3 mb-4 max-h-96 overflow-y-auto">
-                    {selectedExercises.map((exercise, index) => (
-                      <div
-                        key={exercise.id}
-                        className="flex items-start justify-between p-3 bg-gray-50 rounded-lg"
-                      >
+
+                {showExercisePicker && (
+                  <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+                    <input
+                      type="text"
+                      placeholder="Search exercises..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                    <div className="flex gap-2 mb-3 flex-wrap">
+                      {categories.map(cat => (
+                        <button
+                          key={cat}
+                          onClick={() => setSelectedCategory(cat)}
+                          className={`px-3 py-1 rounded-full text-sm transition ${
+                            selectedCategory === cat
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                          }`}
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="max-h-60 overflow-y-auto space-y-2">
+                      {filteredExercises.slice(0, 50).map((ex, idx) => (
+                        <ExercisePickerCard
+                          key={idx}
+                          exercise={ex}
+                          onAdd={() => addExercise(ex)}
+                        />
+                      ))}
+                      {filteredExercises.length === 0 && (
+                        <p className="text-center text-gray-500 py-4">No exercises found</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  {currentWorkout.exercises.length === 0 && (
+                    <p className="text-center text-gray-500 py-8">No exercises added yet. Click "Add Exercise" to get started.</p>
+                  )}
+                  {currentWorkout.exercises.map((exercise, exIdx) => (
+                    <div key={exIdx} className="p-4 bg-gray-50 rounded-lg">
+                      <div className="flex justify-between items-start mb-3">
                         <div className="flex-1">
-                          <div className="flex items-center">
-                            <span className="text-sm font-semibold text-gray-500 mr-2">
-                              {index + 1}.
-                            </span>
-                            <span className="font-medium text-gray-800">{exercise.name}</span>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold text-gray-800">{exercise.name}</h4>
+                            {exercise.instructions && exercise.instructions.length > 0 && (
+                              <button
+                                onClick={() => {
+                                  const updated = { ...currentWorkout };
+                                  const currentShow = (updated.exercises[exIdx] as any)._showInstructions || false;
+                                  (updated.exercises[exIdx] as any)._showInstructions = !currentShow;
+                                  setCurrentWorkout(updated);
+                                }}
+                                className="p-1 text-gray-500 hover:text-blue-600 transition"
+                                title="Show instructions"
+                              >
+                                <Info size={16} />
+                              </button>
+                            )}
                           </div>
-                          <p className="text-xs text-gray-500 mt-1 ml-5">
-                            {exercise.sets && exercise.reps && `${exercise.sets} × ${exercise.reps}`}
-                            {exercise.duration && exercise.duration}
-                          </p>
+                          <p className="text-xs text-gray-600">{exercise.category}</p>
                         </div>
                         <button
-                          onClick={() => removeFromWorkout(exercise.id)}
-                          className="text-red-500 hover:text-red-700 text-sm ml-2"
+                          onClick={() => {
+                            const updated = { ...currentWorkout };
+                            updated.exercises.splice(exIdx, 1);
+                            setCurrentWorkout(updated);
+                          }}
+                          className="text-red-600 hover:text-red-800 ml-2"
                         >
-                          ×
+                          <X size={18} />
                         </button>
                       </div>
-                    ))}
-                  </div>
-                  <button
-                    onClick={clearWorkout}
-                    className="w-full px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-                  >
-                    Clear All
-                  </button>
-                </>
-              )}
+                      {(exercise as any)._showInstructions && exercise.instructions && exercise.instructions.length > 0 && (
+                        <div className="mb-3 p-3 bg-white rounded border border-gray-200">
+                          <p className="text-xs font-semibold text-gray-700 mb-2">Instructions:</p>
+                          <ol className="list-decimal list-inside space-y-1">
+                            {exercise.instructions.map((instruction, idx) => (
+                              <li key={idx} className="text-xs text-gray-600">{instruction}</li>
+                            ))}
+                          </ol>
+                        </div>
+                      )}
+                      {exercise.sets.map((set, setIdx) => (
+                        <div key={setIdx} className="flex gap-2 mb-2 items-center">
+                          <span className="text-sm text-gray-600 w-12">Set {setIdx + 1}</span>
+                          <input
+                            type="number"
+                            value={set.reps}
+                            onChange={(e) => updateSet(exIdx, setIdx, 'reps', e.target.value)}
+                            className="w-20 px-2 py-1 border border-gray-300 rounded"
+                            placeholder="Reps"
+                          />
+                          <span className="text-sm text-gray-600">reps</span>
+                          <input
+                            type="number"
+                            value={set.weight}
+                            onChange={(e) => updateSet(exIdx, setIdx, 'weight', e.target.value)}
+                            className="w-20 px-2 py-1 border border-gray-300 rounded"
+                            placeholder="Weight"
+                          />
+                          <span className="text-sm text-gray-600">lbs</span>
+                        </div>
+                      ))}
+                      <button
+                        onClick={() => addSet(exIdx)}
+                        className="text-sm text-blue-600 hover:text-blue-800 mt-2"
+                      >
+                        + Add Set
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setCurrentWorkout(null)}
+                  className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveWorkout}
+                  disabled={currentWorkout.exercises.length === 0}
+                  className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  Save Workout
+                </button>
+              </div>
             </div>
-          </div>
+          )}
+        </>
+      ) : (
+        <div className="space-y-6">
+          {!hasAnalysisData ? (
+            <div className="bg-white rounded-lg shadow-md p-8 text-center">
+              <p className="text-gray-600 mb-2">No workout data available for the selected time period.</p>
+              <p className="text-sm text-gray-500">Start logging workouts to see your analysis!</p>
+            </div>
+          ) : (
+            <>
+              {/* Time Period Selector */}
+              <div className="bg-white rounded-lg shadow-md p-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Analysis Period
+                </label>
+                <div className="flex gap-2">
+                  {([7, 14, 30] as TimePeriod[]).map(period => (
+                    <button
+                      key={period}
+                      onClick={() => setTimePeriod(period)}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                        timePeriod === period
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
+                      Last {period} Days
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Heatmap */}
+              <BodyHeatmap stats={muscleStats} timePeriod={timePeriod} />
+
+              {/* Suggestions */}
+              <SuggestionsPanel suggestions={suggestions} />
+            </>
+          )}
         </div>
-      </div>
+      )}
     </div>
   );
-};
+}
 
-export default WorkoutPlanner;
+// Saved exercise card component with instructions
+function SavedExerciseCard({ exercise }: { exercise: WorkoutExercise }) {
+  const [showInstructions, setShowInstructions] = useState(false);
+
+  return (
+    <div className="mb-4 last:mb-0 p-3 bg-white rounded">
+      <div className="flex items-center gap-2 mb-2">
+        <h4 className="font-semibold text-gray-800">{exercise.name}</h4>
+        {exercise.instructions && exercise.instructions.length > 0 && (
+          <button
+            onClick={() => setShowInstructions(!showInstructions)}
+            className="p-1 text-gray-500 hover:text-blue-600 transition"
+            title="Show instructions"
+          >
+            <Info size={14} />
+          </button>
+        )}
+      </div>
+      <p className="text-xs text-gray-500 mb-2">{exercise.category} • {exercise.equipment || 'N/A'}</p>
+      {showInstructions && exercise.instructions && exercise.instructions.length > 0 && (
+        <div className="mb-2 p-2 bg-gray-50 rounded border border-gray-200">
+          <p className="text-xs font-semibold text-gray-700 mb-1">Instructions:</p>
+          <ol className="list-decimal list-inside space-y-0.5">
+            {exercise.instructions.map((instruction, idx) => (
+              <li key={idx} className="text-xs text-gray-600">{instruction}</li>
+            ))}
+          </ol>
+        </div>
+      )}
+      {exercise.sets.map((set, setIdx) => (
+        <p key={setIdx} className="text-sm text-gray-600">
+          Set {setIdx + 1}: {set.reps} reps × {set.weight} lbs
+        </p>
+      ))}
+    </div>
+  );
+}

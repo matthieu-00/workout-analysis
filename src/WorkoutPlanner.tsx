@@ -411,15 +411,34 @@ export default function WorkoutPlanner() {
               </div>
             </>
           ) : (
-            <div className="bg-white rounded-lg shadow-lg border border-gray-300 p-6">
+            <div className="bg-white rounded-lg shadow-lg border border-gray-300 p-6 overflow-x-hidden">
               <div className="mb-8">
-                <label className="block text-sm font-medium text-black mb-4">Workout Date</label>
-                <input
-                  type="date"
-                  value={currentWorkout.date}
-                  onChange={(e) => setCurrentWorkout({ ...currentWorkout, date: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black"
-                />
+                <div className="flex items-end gap-4 mb-8">
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-black mb-4">Workout Date</label>
+                    <input
+                      type="date"
+                      value={currentWorkout.date}
+                      onChange={(e) => setCurrentWorkout({ ...currentWorkout, date: e.target.value })}
+                      className="w-full max-w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black box-border"
+                    />
+                  </div>
+                  <div className="flex gap-4">
+                    <button
+                      onClick={() => setCurrentWorkout(null)}
+                      className="bg-gray-200 text-gray-800 py-4 px-6 rounded-lg hover:bg-gray-300 active:scale-95 transition cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={saveWorkout}
+                      disabled={currentWorkout.exercises.length === 0}
+                      className="bg-black text-white py-4 px-6 rounded-lg hover:bg-gray-800 active:scale-95 transition disabled:bg-gray-400 disabled:cursor-not-allowed disabled:active:scale-100 border-2 border-black cursor-pointer"
+                    >
+                      Save Workout
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div className="mb-8">
@@ -432,7 +451,7 @@ export default function WorkoutPlanner() {
                       <h4 className="text-sm font-semibold text-black uppercase tracking-wide">Added Exercises</h4>
                     </div>
                     {currentWorkout.exercises.map((exercise, exIdx) => (
-                    <div key={exIdx} className="p-6 bg-white rounded-lg border-2 border-black shadow-sm">
+                    <div key={exIdx} className="p-6 bg-white rounded-lg border-2 border-black shadow-sm overflow-x-hidden">
                       <div className="flex justify-between items-start mb-4">
                         <div className="flex-1">
                           <div className="flex items-center gap-3">
@@ -476,24 +495,24 @@ export default function WorkoutPlanner() {
                         </div>
                       )}
                       {exercise.sets.map((set, setIdx) => (
-                        <div key={setIdx} className="flex gap-4 mb-4 items-center">
-                          <span className="text-sm text-gray-600 w-16">Set {setIdx + 1}</span>
+                        <div key={setIdx} className="flex gap-4 mb-4 items-center flex-wrap">
+                          <span className="text-sm text-gray-600 w-16 flex-shrink-0">Set {setIdx + 1}</span>
                           <input
                             type="number"
                             value={set.reps}
                             onChange={(e) => updateSet(exIdx, setIdx, 'reps', e.target.value)}
-                            className="w-24 px-3 py-2 border border-gray-300 rounded"
+                            className="w-24 px-3 py-2 border border-gray-300 rounded box-border"
                             placeholder="Reps"
                           />
-                          <span className="text-sm text-gray-600">reps</span>
+                          <span className="text-sm text-gray-600 flex-shrink-0">reps</span>
                           <input
                             type="number"
                             value={set.weight}
                             onChange={(e) => updateSet(exIdx, setIdx, 'weight', e.target.value)}
-                            className="w-24 px-3 py-2 border border-gray-300 rounded"
+                            className="w-24 px-3 py-2 border border-gray-300 rounded box-border"
                             placeholder="Weight"
                           />
-                          <span className="text-sm text-gray-600">lbs</span>
+                          <span className="text-sm text-gray-600 flex-shrink-0">lbs</span>
                         </div>
                       ))}
                       <button
@@ -508,13 +527,13 @@ export default function WorkoutPlanner() {
                 )}
 
                 {/* Always-visible search bar */}
-                <div className="mb-8 p-6 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="mb-8 p-6 bg-gray-50 rounded-lg border border-gray-200 overflow-x-hidden">
                   <input
                     type="text"
                     placeholder="Search exercises..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-black focus:border-black"
+                    className="w-full max-w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-black focus:border-black box-border"
                   />
                   <div className="flex gap-3 mb-6 flex-wrap">
                     {categories.map(cat => (
@@ -553,22 +572,6 @@ export default function WorkoutPlanner() {
                 {currentWorkout.exercises.length === 0 && (
                   <p className="text-center text-gray-500 py-12">No exercises added yet. Search above to add exercises.</p>
                 )}
-              </div>
-
-              <div className="flex gap-4">
-                <button
-                  onClick={() => setCurrentWorkout(null)}
-                  className="flex-1 bg-gray-200 text-gray-800 py-4 px-6 rounded-lg hover:bg-gray-300 active:scale-95 transition cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={saveWorkout}
-                  disabled={currentWorkout.exercises.length === 0}
-                  className="flex-1 bg-black text-white py-4 px-6 rounded-lg hover:bg-gray-800 active:scale-95 transition disabled:bg-gray-400 disabled:cursor-not-allowed disabled:active:scale-100 border-2 border-black cursor-pointer"
-                >
-                  Save Workout
-                </button>
               </div>
             </div>
           )}

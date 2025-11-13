@@ -1,5 +1,6 @@
-import { Workout, Exercise, MuscleGroupStats, Suggestion, TimePeriod } from '../types/workout';
-import { MuscleGroup, getMuscleGroupsFromExercise, MAJOR_MUSCLE_GROUPS } from './muscleGroups';
+import type { Workout, Exercise, MuscleGroupStats, Suggestion, TimePeriod } from '../types/workout';
+import type { MuscleGroup } from './muscleGroups';
+import { getMuscleGroupsFromExercise, MAJOR_MUSCLE_GROUPS } from './muscleGroups';
 
 /**
  * Calculate muscle group engagement from workout history
@@ -30,18 +31,32 @@ export function analyzeMuscleGroups(
       return; // Skip workouts outside the time period
     }
     
-    const workedMuscles = new Set<MuscleGroup>();
-    
     workout.exercises.forEach(exercise => {
       const { primary, secondary } = getMuscleGroupsFromExercise(exercise);
       
-      // Count primary muscles with weight 1.0
+      // Calculate volume: sum of (sets * reps * weight)
+      // This gives us a better measure of engagement than just counting exercises
+      const totalVolume = exercise.sets.reduce((sum, set) => {
+        return sum + (set.reps * set.weight);
+      }, 0);
+      
+      // Normalize volume: divide by 1000 to get a reasonable scale
+      // (e.g., 3 sets of 10 reps at 100lbs = 3000 / 1000 = 3.0)
+      const normalizedVolume = totalVolume / 1000;
+      
+      // Use volume if > 0, otherwise just count the exercise (for exercises with no sets logged)
+      const engagementValue = normalizedVolume > 0 ? normalizedVolume : 1.0;
+      
+      // Track which muscles were worked in this exercise
+      const exerciseMuscles = new Set<MuscleGroup>();
+      
+      // Count primary muscles
       primary.forEach(mg => {
         const stat = stats.get(mg);
         if (stat) {
-          stat.engagementCount += 1.0;
-          stat.workouts += 1;
-          workedMuscles.add(mg);
+          stat.engagementCount += engagementValue;
+          stat.workouts += 1; // Count exercises (keeping field name as workouts for compatibility)
+          exerciseMuscles.add(mg);
           
           // Update last worked date
           if (!stat.lastWorkedDate || workoutDate > new Date(stat.lastWorkedDate)) {
@@ -54,10 +69,10 @@ export function analyzeMuscleGroups(
       secondary.forEach(mg => {
         const stat = stats.get(mg);
         if (stat) {
-          stat.engagementCount += 0.5;
-          if (!workedMuscles.has(mg)) {
-            stat.workouts += 1;
-            workedMuscles.add(mg);
+          stat.engagementCount += engagementValue * 0.5; // Secondary gets half the engagement
+          if (!exerciseMuscles.has(mg)) {
+            stat.workouts += 1; // Count exercises (keeping field name as workouts for compatibility)
+            exerciseMuscles.add(mg);
           }
           
           // Update last worked date
@@ -141,7 +156,10 @@ export function generateSuggestions(
     // Remove priority property and limit results
     const topExercises = matchingExercises
       .slice(0, limitPerGroup)
-      .map(({ _priority, ...exercise }) => exercise);
+      .map((exerciseWithPriority) => {
+        const { _priority, ...exercise } = exerciseWithPriority as Exercise & { _priority: number };
+        return exercise;
+      });
     
     if (topExercises.length > 0) {
       suggestions.push({
@@ -163,13 +181,14 @@ export function getHeatmapIntensity(
   timePeriod: TimePeriod
 ): number {
   // Normalize engagement count based on time period
-  // For a 7-day period, 3+ workouts = hot (1.0)
-  // For a 14-day period, 6+ workouts = hot (1.0)
-  // For a 30-day period, 12+ workouts = hot (1.0)
+  // Engagement count now includes volume (sets * reps * weight / 1000)
+  // For a 7-day period, 6+ exercises worth of volume = hot (1.0)
+  // For a 14-day period, 12+ exercises worth of volume = hot (1.0)
+  // For a 30-day period, 24+ exercises worth of volume = hot (1.0)
   const thresholds = {
-    7: { hot: 3, warm: 1 },
-    14: { hot: 6, warm: 2 },
-    30: { hot: 12, warm: 4 },
+    7: { hot: 6, warm: 2 },
+    14: { hot: 12, warm: 4 },
+    30: { hot: 24, warm: 8 },
   };
   
   const threshold = thresholds[timePeriod];

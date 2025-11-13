@@ -1,7 +1,10 @@
-import { useState } from 'react';
-import { MuscleGroupStats, TimePeriod } from '../types/workout';
-import { MuscleGroup } from '../utils/muscleGroups';
+import { useState, useMemo } from 'react';
+import Model from 'react-body-highlighter';
+import { X } from 'lucide-react';
+import type { MuscleGroupStats, TimePeriod } from '../types/workout';
+import type { MuscleGroup } from '../utils/muscleGroups';
 import { getHeatmapIntensity, getHeatmapColor } from '../utils/workoutAnalysis';
+import { getBodyHighlighterMuscles, getMuscleGroupFromHighlighterName } from '../utils/muscleNameMapping';
 
 interface BodyHeatmapProps {
   stats: Map<MuscleGroup, MuscleGroupStats>;
@@ -9,171 +12,122 @@ interface BodyHeatmapProps {
   onMuscleHover?: (muscleGroup: MuscleGroup | null) => void;
 }
 
-// Body SVG paths for front and back views
-// Coordinates are relative to a 400x600 viewBox with center at (200, 300)
-const bodyRegions: Record<MuscleGroup, { front?: string; back?: string }> = {
-  // Front view
-  chest: { 
-    front: 'M 160 140 Q 180 130 200 130 Q 220 130 240 140 L 240 200 Q 240 210 235 215 Q 230 220 200 220 Q 170 220 165 215 Q 160 210 160 200 Z' 
-  },
-  shoulders: { 
-    front: 'M 150 120 Q 160 110 170 115 L 175 140 Q 175 150 170 155 L 160 160 Q 155 160 150 155 Z M 230 120 Q 240 110 250 115 L 255 140 Q 255 150 250 155 L 240 160 Q 235 160 230 155 Z',
-    back: 'M 150 120 Q 160 110 170 115 L 175 140 Q 175 150 170 155 L 160 160 Q 155 160 150 155 Z M 230 120 Q 240 110 250 115 L 255 140 Q 255 150 250 155 L 240 160 Q 235 160 230 155 Z'
-  },
-  biceps: { 
-    front: 'M 170 160 L 185 160 L 190 220 L 175 220 Z M 215 160 L 230 160 L 225 220 L 210 220 Z' 
-  },
-  triceps: { 
-    front: 'M 155 160 L 170 160 L 175 220 L 160 220 Z M 230 160 L 245 160 L 240 220 L 225 220 Z',
-    back: 'M 155 160 L 170 160 L 175 220 L 160 220 Z M 230 160 L 245 160 L 240 220 L 225 220 Z'
-  },
-  forearms: { 
-    front: 'M 160 220 L 180 220 L 185 280 L 165 280 Z M 220 220 L 240 220 L 235 280 L 215 280 Z',
-    back: 'M 160 220 L 180 220 L 185 280 L 165 280 Z M 220 220 L 240 220 L 235 280 L 215 280 Z'
-  },
-  abdominals: { 
-    front: 'M 170 220 Q 185 220 200 220 Q 215 220 230 220 L 230 280 Q 230 290 200 290 Q 170 290 170 280 Z' 
-  },
-  quadriceps: { 
-    front: 'M 175 300 L 200 300 L 205 420 L 180 420 Z M 200 300 L 225 300 L 220 420 L 195 420 Z' 
-  },
-  hamstrings: { 
-    back: 'M 175 300 L 200 300 L 205 420 L 180 420 Z M 200 300 L 225 300 L 220 420 L 195 420 Z' 
-  },
-  glutes: { 
-    back: 'M 170 280 Q 185 280 200 280 Q 215 280 230 280 L 230 320 Q 230 330 200 330 Q 170 330 170 320 Z' 
-  },
-  calves: { 
-    front: 'M 180 420 L 195 420 L 198 520 L 183 520 Z M 205 420 L 220 420 L 217 520 L 202 520 Z',
-    back: 'M 180 420 L 195 420 L 198 520 L 183 520 Z M 205 420 L 220 420 L 217 520 L 202 520 Z'
-  },
-  // Back view
-  back: { 
-    back: 'M 160 140 Q 180 130 200 130 Q 220 130 240 140 L 240 250 Q 240 260 200 260 Q 160 260 160 250 Z' 
-  },
-  traps: { 
-    back: 'M 170 100 Q 185 90 200 90 Q 215 90 230 100 L 230 140 Q 230 150 200 150 Q 170 150 170 140 Z' 
-  },
-  lats: { 
-    back: 'M 150 160 L 170 160 L 175 240 L 155 240 Z M 230 160 L 250 160 L 245 240 L 225 240 Z' 
-  },
-  'middle back': { 
-    back: 'M 170 160 Q 185 160 200 160 Q 215 160 230 160 L 230 220 Q 230 230 200 230 Q 170 230 170 220 Z' 
-  },
-  'lower back': { 
-    back: 'M 170 220 Q 185 220 200 220 Q 215 220 230 220 L 230 280 Q 230 290 200 290 Q 170 290 170 280 Z' 
-  },
-  adductors: { 
-    front: 'M 170 320 L 180 320 L 182 420 L 172 420 Z M 220 320 L 230 320 L 228 420 L 218 420 Z' 
-  },
-  abductors: { 
-    front: 'M 160 320 L 170 320 L 172 420 L 162 420 Z M 230 320 L 240 320 L 238 420 L 228 420 Z' 
-  },
-  neck: { 
-    front: 'M 185 70 Q 195 60 200 60 Q 205 60 215 70 L 215 120 Q 215 130 200 130 Q 185 130 185 120 Z',
-    back: 'M 185 70 Q 195 60 200 60 Q 205 60 215 70 L 215 120 Q 215 130 200 130 Q 185 130 185 120 Z'
-  },
-};
 
 export default function BodyHeatmap({ stats, timePeriod, onMuscleHover }: BodyHeatmapProps) {
-  const [hoveredMuscle, setHoveredMuscle] = useState<MuscleGroup | null>(null);
-  const [view, setView] = useState<'front' | 'back'>('front');
+  const [view, setView] = useState<'anterior' | 'posterior'>('anterior');
+  const [selectedMuscle, setSelectedMuscle] = useState<{ muscleGroup: MuscleGroup; stat: MuscleGroupStats } | null>(null);
 
-  const handleMouseEnter = (muscleGroup: MuscleGroup) => {
-    setHoveredMuscle(muscleGroup);
-    onMuscleHover?.(muscleGroup);
-  };
+  // Convert our stats to react-body-highlighter format
+  const exerciseData = useMemo(() => {
+    const data: Array<{ name: string; muscles: string[]; intensity: number }> = [];
+    
+    stats.forEach((stat, muscleGroup) => {
+      const intensity = getHeatmapIntensity(stat, timePeriod);
+      const bodyHighlighterMuscles = getBodyHighlighterMuscles(muscleGroup);
+      
+      bodyHighlighterMuscles.forEach(muscle => {
+        data.push({
+          name: muscleGroup,
+          muscles: [muscle],
+          intensity,
+        });
+      });
+    });
+    
+    return data;
+  }, [stats, timePeriod]);
 
-  const handleMouseLeave = () => {
-    setHoveredMuscle(null);
-    onMuscleHover?.(null);
-  };
+  // Create highlighted colors array based on intensity levels
+  const highlightedColors = useMemo(() => {
+    const colors = new Set<string>();
+    exerciseData.forEach(item => {
+      colors.add(getHeatmapColor(item.intensity));
+    });
+    return Array.from(colors);
+  }, [exerciseData]);
 
-  const renderBodyView = (side: 'front' | 'back') => {
-    return (
-      <svg width="400" height="600" viewBox="0 0 400 600" className="w-full h-auto max-w-md mx-auto">
-        {/* Body outline - simplified human silhouette */}
-        <path
-          d="M 200 50 Q 180 50 170 70 L 150 120 Q 140 140 145 160 L 145 200 Q 145 220 150 240 L 150 280 Q 150 300 160 320 L 160 400 Q 160 420 170 440 L 180 480 Q 185 500 200 500 Q 215 500 220 480 L 230 440 Q 240 420 240 400 L 240 320 Q 250 300 250 280 L 250 240 Q 255 220 255 200 L 255 160 Q 260 140 250 120 L 230 70 Q 220 50 200 50 Z"
-          fill="none"
-          stroke="#e5e7eb"
-          strokeWidth="3"
-        />
-        
-        {/* Muscle groups */}
-        {Array.from(stats.entries()).map(([muscleGroup, stat]) => {
-          const region = bodyRegions[muscleGroup];
-          const path = region?.[side];
-          
-          if (!path) return null;
-          
-          const intensity = getHeatmapIntensity(stat, timePeriod);
-          const color = getHeatmapColor(intensity);
-          const isHovered = hoveredMuscle === muscleGroup;
-          
-          return (
-            <g key={`${muscleGroup}-${side}`}>
-              <path
-                d={path}
-                fill={color}
-                fillOpacity={isHovered ? 0.85 : 0.65}
-                stroke={isHovered ? '#1f2937' : color}
-                strokeWidth={isHovered ? 2.5 : 1}
-                onMouseEnter={() => handleMouseEnter(muscleGroup)}
-                onMouseLeave={handleMouseLeave}
-                className="cursor-pointer transition-all"
-                style={{ filter: isHovered ? 'brightness(1.15) drop-shadow(0 2px 4px rgba(0,0,0,0.2))' : 'none' }}
-              />
-              {isHovered && (
-                <g>
-                  <rect
-                    x="50"
-                    y="20"
-                    width="300"
-                    height="30"
-                    fill="rgba(255, 255, 255, 0.95)"
-                    stroke="#1f2937"
-                    strokeWidth="1"
-                    rx="4"
-                  />
-                  <text
-                    x="200"
-                    y="40"
-                    textAnchor="middle"
-                    className="text-sm font-semibold fill-gray-800"
-                  >
-                    {muscleGroup.charAt(0).toUpperCase() + muscleGroup.slice(1)} - {stat.engagementCount.toFixed(1)} workouts
-                  </text>
-                </g>
-              )}
-            </g>
-          );
-        })}
-      </svg>
-    );
+  // Create data format for react-body-highlighter
+  // The library expects: [{ name: string, muscles: string[] }]
+  // We create "exercise" entries for each muscle group that has been worked
+  const modelData = useMemo(() => {
+    const data: Array<{ name: string; muscles: string[] }> = [];
+    
+    stats.forEach((stat, muscleGroup) => {
+      // Only include muscles that have been worked (engagementCount > 0)
+      if (stat.engagementCount > 0) {
+        const bodyHighlighterMuscles = getBodyHighlighterMuscles(muscleGroup);
+        if (bodyHighlighterMuscles.length > 0) {
+          // Create an entry for each muscle in the group
+          bodyHighlighterMuscles.forEach(muscle => {
+            data.push({
+              name: `${muscleGroup} workout`,
+              muscles: [muscle],
+            });
+          });
+        }
+      }
+    });
+    
+    // If no data, return empty array to avoid errors
+    return data.length > 0 ? data : [];
+  }, [stats]);
+
+  const handleMuscleClick = ({ muscle }: { muscle: string; data?: any }) => {
+    const muscleGroup = getMuscleGroupFromHighlighterName(muscle);
+    if (muscleGroup) {
+      onMuscleHover?.(muscleGroup);
+      const stat = stats.get(muscleGroup);
+      if (stat) {
+        setSelectedMuscle({ muscleGroup, stat });
+      }
+    }
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-xl font-semibold text-gray-800">Muscle Group Heatmap</h3>
+    <div className="bg-white rounded-lg shadow-lg p-6 border border-gray-200 h-full flex flex-col">
+      <div className="mb-4">
+        <h3 className="text-xl font-semibold text-black mb-2">Muscle Group Heatmap</h3>
+        
+        {/* Legend as subheader */}
+        <div className="flex items-center gap-3 text-xs text-gray-700 mb-3 flex-wrap">
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded" style={{ backgroundColor: '#3b82f6' }}></div>
+            <span className="font-medium">Cold (0 workouts)</span>
+          </div>
+          <span className="text-gray-400">•</span>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded" style={{ backgroundColor: '#eab308' }}></div>
+            <span className="font-medium">Cool (1-2 workouts)</span>
+          </div>
+          <span className="text-gray-400">•</span>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded" style={{ backgroundColor: '#f97316' }}></div>
+            <span className="font-medium">Warm (2-3 workouts)</span>
+          </div>
+          <span className="text-gray-400">•</span>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded" style={{ backgroundColor: '#ef4444' }}></div>
+            <span className="font-medium">Hot (3+ workouts)</span>
+          </div>
+        </div>
+        
         <div className="flex gap-2">
           <button
-            onClick={() => setView('front')}
+            onClick={() => setView('anterior')}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-              view === 'front'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              view === 'anterior'
+                ? 'bg-black text-white border-2 border-black'
+                : 'bg-white text-black border-2 border-gray-300 hover:bg-gray-50'
             }`}
           >
             Front
           </button>
           <button
-            onClick={() => setView('back')}
+            onClick={() => setView('posterior')}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-              view === 'back'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              view === 'posterior'
+                ? 'bg-black text-white border-2 border-black'
+                : 'bg-white text-black border-2 border-gray-300 hover:bg-gray-50'
             }`}
           >
             Back
@@ -181,30 +135,48 @@ export default function BodyHeatmap({ stats, timePeriod, onMuscleHover }: BodyHe
         </div>
       </div>
       
-      <div className="flex justify-center mb-4">
-        {view === 'front' ? renderBodyView('front') : renderBodyView('back')}
+      <div className="flex flex-col items-center justify-center mb-4 flex-1 min-h-0">
+        <div className="relative w-full max-w-full" style={{ maxHeight: '100%' }}>
+          <div className="w-full flex justify-center" style={{ maxWidth: '100%', height: 'auto' }}>
+            <Model
+              data={modelData as any}
+              type={view}
+              bodyColor="#e5e7eb"
+              highlightedColors={highlightedColors}
+              onClick={handleMuscleClick}
+              style={{ width: '100%', maxWidth: 'min(400px, 100%)', padding: '2rem', height: 'auto' }}
+              svgStyle={{ filter: 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1))', maxWidth: '100%', height: 'auto' }}
+            />
+          </div>
+        </div>
       </div>
       
-      {/* Legend */}
-      <div className="flex items-center justify-center gap-4 text-sm">
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded" style={{ backgroundColor: '#3b82f6' }}></div>
-          <span>Cold (0 workouts)</span>
+      {/* Selected muscle info - more prominent below heatmap */}
+      {selectedMuscle && (
+        <div className="mt-4 p-4 bg-gray-100 border-2 border-black rounded-lg relative">
+          <button
+            onClick={() => setSelectedMuscle(null)}
+            className="absolute top-2 right-2 text-black hover:text-gray-600 p-1 transition z-10 bg-white rounded"
+            title="Close"
+          >
+            <X size={20} />
+          </button>
+          <div className="pr-8">
+            <h4 className="text-lg font-bold text-black capitalize mb-1">
+              {selectedMuscle.muscleGroup}
+            </h4>
+            <p className="text-sm text-gray-700">
+              <span className="font-semibold">Exercise Frequency:</span>{' '}
+              {selectedMuscle.stat.workouts} {selectedMuscle.stat.workouts === 1 ? 'exercise' : 'exercises'} in the last {timePeriod} days
+            </p>
+            {selectedMuscle.stat.lastWorkedDate && (
+              <p className="text-xs text-gray-600 mt-1">
+                Last worked: {new Date(selectedMuscle.stat.lastWorkedDate).toLocaleDateString()}
+              </p>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded" style={{ backgroundColor: '#eab308' }}></div>
-          <span>Cool (1-2 workouts)</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded" style={{ backgroundColor: '#f97316' }}></div>
-          <span>Warm (2-3 workouts)</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded" style={{ backgroundColor: '#ef4444' }}></div>
-          <span>Hot (3+ workouts)</span>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
-

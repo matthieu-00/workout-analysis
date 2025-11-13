@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Suggestion, Exercise } from '../types/workout';
+import type { Suggestion, Exercise } from '../types/workout';
 import { Plus, ChevronDown, ChevronUp, Info } from 'lucide-react';
 
 interface SuggestionsPanelProps {
@@ -29,9 +29,9 @@ export default function SuggestionsPanel({ suggestions, onAddExercise }: Suggest
 
   if (suggestions.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-xl font-semibold text-gray-800 mb-4">Exercise Suggestions</h3>
-        <div className="text-center py-8 text-gray-500">
+      <div className="bg-white rounded-lg shadow-lg border border-gray-300 p-6 h-full flex flex-col">
+        <h3 className="text-xl font-semibold text-black mb-4">Exercise Suggestions</h3>
+        <div className="text-center py-8 text-gray-600 flex-1 flex items-center justify-center">
           <p>Great job! All major muscle groups have been worked in the last week.</p>
         </div>
       </div>
@@ -39,13 +39,13 @@ export default function SuggestionsPanel({ suggestions, onAddExercise }: Suggest
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <h3 className="text-xl font-semibold text-gray-800 mb-4">Exercise Suggestions</h3>
-      <p className="text-sm text-gray-600 mb-4">
+    <div className="bg-white rounded-lg shadow-lg border border-gray-300 p-6 h-full flex flex-col">
+      <h3 className="text-xl font-semibold text-black mb-4">Exercise Suggestions</h3>
+      <p className="text-sm text-gray-700 mb-4">
         These muscle groups haven't been worked in the last week. Consider adding these exercises:
       </p>
       
-      <div className="space-y-4">
+      <div className="space-y-4 overflow-y-auto flex-1 pr-2">
         {suggestions.map((suggestion) => {
           const isGroupExpanded = expandedGroups.has(suggestion.muscleGroup);
           const showAllExercises = expandedExercises.get(suggestion.muscleGroup) || false;
@@ -63,10 +63,10 @@ export default function SuggestionsPanel({ suggestions, onAddExercise }: Suggest
                 className="w-full p-4 bg-gray-50 hover:bg-gray-100 transition flex justify-between items-center"
               >
                 <div className="text-left">
-                  <h4 className="font-semibold text-gray-800 capitalize">
+                  <h4 className="font-semibold text-black capitalize">
                     {suggestion.muscleGroup}
                   </h4>
-                  <p className="text-sm text-gray-600 mt-1">{suggestion.reason}</p>
+                  <p className="text-sm text-gray-700 mt-1">{suggestion.reason}</p>
                 </div>
                 {isGroupExpanded ? (
                   <ChevronUp className="text-gray-600" size={20} />
@@ -101,7 +101,7 @@ export default function SuggestionsPanel({ suggestions, onAddExercise }: Suggest
                         )}
                         <button
                           onClick={() => toggleExercises(suggestion.muscleGroup)}
-                          className="w-full text-sm text-blue-600 hover:text-blue-800 font-medium py-2 flex items-center justify-center gap-1"
+                          className="w-full text-sm text-black hover:text-gray-700 font-medium py-2 flex items-center justify-center gap-1"
                         >
                           {showAllExercises ? (
                             <>
@@ -141,11 +141,11 @@ function ExerciseCard({ exercise, onAdd }: ExerciseCardProps) {
       <div className="flex items-start justify-between p-3">
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <h5 className="font-medium text-gray-800">{exercise.name}</h5>
+            <h5 className="font-medium text-black">{exercise.name}</h5>
             {exercise.instructions && exercise.instructions.length > 0 && (
               <button
                 onClick={() => setShowInstructions(!showInstructions)}
-                className="p-1 text-gray-500 hover:text-blue-600 transition"
+                className="p-1 text-gray-500 hover:text-black transition"
                 title="Show instructions"
               >
                 <Info size={14} />
@@ -153,22 +153,22 @@ function ExerciseCard({ exercise, onAdd }: ExerciseCardProps) {
             )}
           </div>
           <div className="flex flex-wrap gap-2 mt-1">
-            <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">
+            <span className="text-xs px-2 py-1 bg-gray-200 text-black rounded border border-gray-300">
               {exercise.category}
             </span>
             {exercise.equipment && (
-              <span className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded">
+              <span className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded border border-gray-300">
                 {exercise.equipment}
               </span>
             )}
           </div>
           <div className="mt-2">
-            <p className="text-xs text-gray-600">
+            <p className="text-xs text-gray-700">
               <span className="font-medium">Primary:</span>{' '}
               {exercise.primaryMuscles.join(', ') || 'N/A'}
             </p>
             {exercise.secondaryMuscles.length > 0 && (
-              <p className="text-xs text-gray-600">
+              <p className="text-xs text-gray-700">
                 <span className="font-medium">Secondary:</span>{' '}
                 {exercise.secondaryMuscles.join(', ')}
               </p>
@@ -178,7 +178,7 @@ function ExerciseCard({ exercise, onAdd }: ExerciseCardProps) {
         {onAdd && (
           <button
             onClick={() => onAdd(exercise)}
-            className="ml-3 p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition"
+            className="ml-3 p-2 text-black hover:text-gray-700 hover:bg-gray-100 rounded transition border border-gray-300"
             title="Add to workout"
           >
             <Plus size={18} />
@@ -187,10 +187,10 @@ function ExerciseCard({ exercise, onAdd }: ExerciseCardProps) {
       </div>
       {showInstructions && exercise.instructions && exercise.instructions.length > 0 && (
         <div className="px-3 pb-3 pt-2 bg-white border-t border-gray-200">
-          <p className="text-xs font-semibold text-gray-700 mb-2">Instructions:</p>
+          <p className="text-xs font-semibold text-black mb-2">Instructions:</p>
           <ol className="list-decimal list-inside space-y-1">
             {exercise.instructions.map((instruction, idx) => (
-              <li key={idx} className="text-xs text-gray-600">{instruction}</li>
+              <li key={idx} className="text-xs text-gray-700">{instruction}</li>
             ))}
           </ol>
         </div>

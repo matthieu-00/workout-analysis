@@ -11,34 +11,38 @@ function ExercisePickerCard({ exercise, onAdd }: { exercise: Exercise; onAdd: ()
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-      <div
-        onClick={onAdd}
-        className="p-3 hover:bg-gray-100 cursor-pointer transition"
-      >
-        <div className="flex justify-between items-start">
-          <div className="flex-1">
-            <p className="font-medium text-black">{exercise.name}</p>
-            <p className="text-sm text-gray-700">{exercise.category} • {exercise.equipment || 'N/A'}</p>
-            <p className="text-xs text-gray-600 mt-1">
-              Primary: {exercise.primaryMuscles.join(', ') || 'N/A'}
-            </p>
-          </div>
+      <div className="p-4 flex items-start justify-between gap-4">
+        <div className="flex-1">
+          <p className="font-medium text-black">{exercise.name}</p>
+          <p className="text-sm text-gray-700 mt-2">{exercise.category} • {exercise.equipment || 'N/A'}</p>
+          <p className="text-xs text-gray-600 mt-2">
+            Primary: {exercise.primaryMuscles.join(', ') || 'N/A'}
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          {exercise.instructions && exercise.instructions.length > 0 && (
+            <button
+              onClick={() => setShowInstructions(!showInstructions)}
+              className="p-2 text-gray-500 hover:text-black active:scale-95 transition cursor-pointer"
+              title="Show instructions"
+            >
+              <Info size={16} />
+            </button>
+          )}
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowInstructions(!showInstructions);
-            }}
-            className="ml-2 p-1 text-gray-500 hover:text-black transition"
-            title="Show instructions"
+            onClick={onAdd}
+            className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 active:scale-95 transition cursor-pointer flex items-center gap-2 text-sm font-medium"
+            title="Add to workout"
           >
-            <Info size={16} />
+            <Plus size={16} />
+            Add
           </button>
         </div>
       </div>
       {showInstructions && exercise.instructions && exercise.instructions.length > 0 && (
-        <div className="px-3 pb-3 pt-2 bg-gray-50 border-t border-gray-200">
-          <p className="text-xs font-semibold text-gray-700 mb-2">Instructions:</p>
-          <ol className="list-decimal list-inside space-y-1">
+        <div className="px-4 pb-4 pt-3 bg-gray-50 border-t border-gray-200">
+          <p className="text-xs font-semibold text-gray-700 mb-3">Instructions:</p>
+          <ol className="list-decimal list-inside space-y-2">
             {exercise.instructions.map((instruction, idx) => (
               <li key={idx} className="text-xs text-gray-600">{instruction}</li>
             ))}
@@ -54,7 +58,6 @@ type ViewMode = 'workouts' | 'analysis';
 export default function WorkoutPlanner() {
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [currentWorkout, setCurrentWorkout] = useState<Workout | null>(null);
-  const [showExercisePicker, setShowExercisePicker] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedWorkout, setExpandedWorkout] = useState<number | null>(null);
   const [exerciseDB, setExerciseDB] = useState<Exercise[]>([]);
@@ -63,6 +66,7 @@ export default function WorkoutPlanner() {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [viewMode, setViewMode] = useState<ViewMode>('workouts');
   const [timePeriod, setTimePeriod] = useState<TimePeriod>(7);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   // Fetch exercises from GitHub Gist on component mount
   useEffect(() => {
@@ -108,9 +112,7 @@ export default function WorkoutPlanner() {
   }, []);
 
   useEffect(() => {
-    if (workouts.length > 0) {
-      localStorage.setItem('workoutPlanner', JSON.stringify({ workouts }));
-    }
+    localStorage.setItem('workoutPlanner', JSON.stringify({ workouts }));
   }, [workouts]);
 
   const startNewWorkout = () => {
@@ -122,18 +124,20 @@ export default function WorkoutPlanner() {
   };
 
   const addExercise = (exercise: Exercise) => {
-    if (currentWorkout) {
+    setCurrentWorkout(prev => {
+      if (!prev) {
+        console.warn('Cannot add exercise: no current workout');
+        return prev;
+      }
       const workoutExercise: WorkoutExercise = {
         ...exercise,
         sets: [{ reps: 10, weight: 0 }]
       };
-      setCurrentWorkout({
-        ...currentWorkout,
-        exercises: [...currentWorkout.exercises, workoutExercise]
-      });
-      // Keep exercise picker open so user can add more exercises
-      setSearchTerm('');
-    }
+      return {
+        ...prev,
+        exercises: [...prev.exercises, workoutExercise]
+      };
+    });
   };
 
   const updateSet = (exerciseIndex: number, setIndex: number, field: 'reps' | 'weight', value: string) => {
@@ -163,6 +167,11 @@ export default function WorkoutPlanner() {
 
   const deleteWorkout = (id: number) => {
     setWorkouts(workouts.filter(w => w.id !== id));
+  };
+
+  const clearAllWorkouts = () => {
+    setWorkouts([]);
+    setShowClearConfirm(false);
   };
 
   const categories = useMemo(() => {
@@ -222,16 +231,16 @@ export default function WorkoutPlanner() {
 
   return (
     <div className="max-w-6xl mx-auto p-6 bg-gray-100 min-h-screen">
-      <div className="bg-white rounded-lg shadow-lg border border-gray-300 p-6 mb-6">
-        <h1 className="text-3xl font-bold text-black mb-2">Workout Planner</h1>
+      <div className="bg-white rounded-lg shadow-lg border border-gray-300 p-6 mb-8">
+        <h1 className="text-3xl font-bold text-black mb-4">Workout Planner</h1>
         <p className="text-gray-700">Track your fitness journey • {exerciseDB.length} exercises available</p>
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex gap-4 mb-8">
         <button
           onClick={() => setViewMode('workouts')}
-          className={`flex-1 py-3 px-4 rounded-lg font-medium transition flex items-center justify-center gap-2 border-2 ${
+          className={`flex-1 py-3 px-4 rounded-lg font-medium transition flex items-center justify-center gap-2 border-2 active:scale-95 cursor-pointer ${
             viewMode === 'workouts'
               ? 'bg-black text-white border-black'
               : 'bg-white text-black border-gray-300 hover:bg-gray-50 hover:border-gray-400'
@@ -242,7 +251,7 @@ export default function WorkoutPlanner() {
         </button>
         <button
           onClick={() => setViewMode('analysis')}
-          className={`flex-1 py-3 px-4 rounded-lg font-medium transition flex items-center justify-center gap-2 border-2 ${
+          className={`flex-1 py-3 px-4 rounded-lg font-medium transition flex items-center justify-center gap-2 border-2 active:scale-95 cursor-pointer ${
             viewMode === 'analysis'
               ? 'bg-black text-white border-black'
               : 'bg-white text-black border-gray-300 hover:bg-gray-50 hover:border-gray-400'
@@ -253,19 +262,65 @@ export default function WorkoutPlanner() {
         </button>
       </div>
 
+      {/* Clear All Confirmation Modal */}
+      {showClearConfirm && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" 
+          onClick={() => setShowClearConfirm(false)}
+        >
+          <div 
+            className="bg-white rounded-lg shadow-2xl border-2 border-black p-8 w-full max-w-md mx-auto" 
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-6">
+              <h3 className="text-2xl font-bold text-black mb-4">Clear All Workouts?</h3>
+              <div className="h-1 w-12 bg-black rounded-full"></div>
+            </div>
+            <p className="text-gray-700 mb-8 leading-relaxed">
+              This will permanently delete all <span className="font-semibold text-black">{workouts.length}</span> workout{workouts.length === 1 ? '' : 's'}. This action cannot be undone.
+            </p>
+            <div className="flex gap-4">
+              <button
+                onClick={() => setShowClearConfirm(false)}
+                className="flex-1 bg-gray-200 text-gray-800 py-4 px-6 rounded-lg hover:bg-gray-300 active:scale-95 transition cursor-pointer font-medium border-2 border-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={clearAllWorkouts}
+                className="flex-1 bg-red-600 text-white py-4 px-6 rounded-lg hover:bg-red-700 active:scale-95 transition cursor-pointer font-medium border-2 border-red-700 shadow-lg"
+              >
+                Clear All
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {viewMode === 'workouts' ? (
         <>
           {!currentWorkout ? (
             <>
-              <button
-                onClick={startNewWorkout}
-                className="w-full bg-black text-white py-3 px-4 rounded-lg mb-6 flex items-center justify-center gap-2 hover:bg-gray-800 transition border-2 border-black shadow-lg"
-              >
-                <Plus size={20} />
-                Start New Workout
-              </button>
+              <div className="flex gap-4 mb-8">
+                <button
+                  onClick={startNewWorkout}
+                  className="flex-1 bg-black text-white py-4 px-6 rounded-lg flex items-center justify-center gap-3 hover:bg-gray-800 active:scale-95 transition border-2 border-black shadow-lg cursor-pointer"
+                >
+                  <Plus size={20} />
+                  Start New Workout
+                </button>
+                {workouts.length > 0 && (
+                  <button
+                    onClick={() => setShowClearConfirm(true)}
+                    className="bg-red-600 text-white py-4 px-6 rounded-lg flex items-center justify-center gap-3 hover:bg-red-700 active:scale-95 transition border-2 border-red-700 shadow-lg cursor-pointer"
+                  >
+                    <Trash2 size={20} />
+                    Clear All
+                  </button>
+                )}
+              </div>
 
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {workouts.length === 0 ? (
                   <div className="bg-white rounded-lg shadow-lg border border-gray-300 p-8 text-center text-gray-600">
                     <p>No workouts yet. Start your first workout above!</p>
@@ -287,7 +342,7 @@ export default function WorkoutPlanner() {
                   );
 
                   return (
-                    <div className="space-y-6">
+                    <div className="space-y-8">
                       {sortedDates.map(dateKey => {
                         const dayWorkouts = workoutsByDate[dateKey];
                         const displayDate = new Date(dayWorkouts[0].date);
@@ -295,7 +350,7 @@ export default function WorkoutPlanner() {
                         return (
                           <div key={dateKey} className="space-y-4">
                             {/* Date Header */}
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-4">
                               <Calendar className="text-black" size={20} />
                               <h3 className="text-lg font-semibold text-black">
                                 {displayDate.toLocaleDateString('en-US', { 
@@ -311,24 +366,24 @@ export default function WorkoutPlanner() {
                             {dayWorkouts.map((workout, workoutIndex) => (
                               <div key={workout.id} className="bg-white rounded-lg shadow-lg border border-gray-300 overflow-hidden ml-8">
                                 <div 
-                                  className="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50 transition"
+                                  className="p-6 flex justify-between items-center cursor-pointer hover:bg-gray-50 active:scale-[0.98] transition"
                                   onClick={() => setExpandedWorkout(expandedWorkout === workout.id ? null : workout.id)}
                                 >
-                                  <div className="flex items-center gap-3">
-                                    <div>
-                                      <p className="font-semibold text-black">
-                                        Workout {workoutIndex + 1}
-                                      </p>
-                                      <p className="text-sm text-gray-700">{workout.exercises.length} {workout.exercises.length === 1 ? 'exercise' : 'exercises'}</p>
-                                    </div>
+                                  <div className="flex items-center gap-4">
+                                  <div>
+                                    <p className="font-semibold text-black">
+                                      Workout {workoutIndex + 1}
+                                    </p>
+                                    <p className="text-sm text-gray-700 mt-2">{workout.exercises.length} {workout.exercises.length === 1 ? 'exercise' : 'exercises'}</p>
                                   </div>
-                                  <div className="flex items-center gap-2">
+                                  </div>
+                                  <div className="flex items-center gap-4">
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         deleteWorkout(workout.id);
                                       }}
-                                      className="text-black hover:text-gray-600 p-2 transition"
+                                      className="text-black hover:text-red-600 active:scale-95 p-2 transition cursor-pointer"
                                     >
                                       <Trash2 size={18} />
                                     </button>
@@ -337,7 +392,7 @@ export default function WorkoutPlanner() {
                                 </div>
                                 
                                 {expandedWorkout === workout.id && (
-                                  <div className="p-4 bg-gray-50 border-t">
+                                  <div className="p-6 bg-gray-50 border-t">
                                     {workout.exercises.map((exercise, idx) => (
                                       <div key={idx} className="mb-4 last:mb-0">
                                         <SavedExerciseCard exercise={exercise} />
@@ -357,76 +412,30 @@ export default function WorkoutPlanner() {
             </>
           ) : (
             <div className="bg-white rounded-lg shadow-lg border border-gray-300 p-6">
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-black mb-2">Workout Date</label>
+              <div className="mb-8">
+                <label className="block text-sm font-medium text-black mb-4">Workout Date</label>
                 <input
                   type="date"
                   value={currentWorkout.date}
                   onChange={(e) => setCurrentWorkout({ ...currentWorkout, date: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black"
                 />
               </div>
 
-              <div className="mb-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold text-black">Exercises</h3>
-                  <button
-                    onClick={() => setShowExercisePicker(!showExercisePicker)}
-                    className="bg-black text-white py-2 px-4 rounded-lg flex items-center gap-2 hover:bg-gray-800 transition border-2 border-black"
-                  >
-                    <Plus size={16} />
-                    Add Exercise
-                  </button>
-                </div>
-
-                {showExercisePicker && (
-                  <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-                    <input
-                      type="text"
-                      placeholder="Search exercises..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-3 focus:ring-2 focus:ring-black focus:border-black"
-                    />
-                    <div className="flex gap-2 mb-3 flex-wrap">
-                      {categories.map(cat => (
-                        <button
-                          key={cat}
-                          onClick={() => setSelectedCategory(cat)}
-                          className={`px-3 py-1 rounded-full text-sm transition ${
-                            selectedCategory === cat
-                              ? 'bg-black text-white border-2 border-black'
-                              : 'bg-white text-black hover:bg-gray-100 border-2 border-gray-300'
-                          }`}
-                        >
-                          {cat}
-                        </button>
-                      ))}
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold text-black mb-6">Exercises</h3>
+                
+                {/* Added exercises - shown first, right below search */}
+                {currentWorkout.exercises.length > 0 && (
+                  <div className="mb-8 space-y-4">
+                    <div className="border-t-2 border-b-2 border-black py-4 mb-6">
+                      <h4 className="text-sm font-semibold text-black uppercase tracking-wide">Added Exercises</h4>
                     </div>
-                    <div className="max-h-60 overflow-y-auto space-y-2">
-                      {filteredExercises.slice(0, 50).map((ex, idx) => (
-                        <ExercisePickerCard
-                          key={idx}
-                          exercise={ex}
-                          onAdd={() => addExercise(ex)}
-                        />
-                      ))}
-                      {filteredExercises.length === 0 && (
-                        <p className="text-center text-gray-500 py-4">No exercises found</p>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                <div className="space-y-4">
-                  {currentWorkout.exercises.length === 0 && (
-                    <p className="text-center text-gray-500 py-8">No exercises added yet. Click "Add Exercise" to get started.</p>
-                  )}
-                  {currentWorkout.exercises.map((exercise, exIdx) => (
-                    <div key={exIdx} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                      <div className="flex justify-between items-start mb-3">
+                    {currentWorkout.exercises.map((exercise, exIdx) => (
+                    <div key={exIdx} className="p-6 bg-white rounded-lg border-2 border-black shadow-sm">
+                      <div className="flex justify-between items-start mb-4">
                         <div className="flex-1">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-3">
                             <h4 className="font-semibold text-black">{exercise.name}</h4>
                             {exercise.instructions && exercise.instructions.length > 0 && (
                               <button
@@ -436,14 +445,14 @@ export default function WorkoutPlanner() {
                                   (updated.exercises[exIdx] as any)._showInstructions = !currentShow;
                                   setCurrentWorkout(updated);
                                 }}
-                                className="p-1 text-gray-500 hover:text-black transition"
+                                className="p-2 text-gray-500 hover:text-black active:scale-95 transition cursor-pointer"
                                 title="Show instructions"
                               >
                                 <Info size={16} />
                               </button>
                             )}
                           </div>
-                          <p className="text-xs text-gray-600">{exercise.category}</p>
+                          <p className="text-xs text-gray-600 mt-2 mb-4">{exercise.category}</p>
                         </div>
                         <button
                           onClick={() => {
@@ -451,15 +460,15 @@ export default function WorkoutPlanner() {
                             updated.exercises.splice(exIdx, 1);
                             setCurrentWorkout(updated);
                           }}
-                          className="text-black hover:text-gray-600 ml-2"
+                          className="text-black hover:text-red-600 active:scale-95 ml-4 transition cursor-pointer"
                         >
                           <X size={18} />
                         </button>
                       </div>
                       {(exercise as any)._showInstructions && exercise.instructions && exercise.instructions.length > 0 && (
-                        <div className="mb-3 p-3 bg-white rounded border border-gray-200">
-                          <p className="text-xs font-semibold text-gray-700 mb-2">Instructions:</p>
-                          <ol className="list-decimal list-inside space-y-1">
+                        <div className="mb-4 p-4 bg-gray-50 rounded border border-gray-200">
+                          <p className="text-xs font-semibold text-gray-700 mb-3">Instructions:</p>
+                          <ol className="list-decimal list-inside space-y-2">
                             {exercise.instructions.map((instruction, idx) => (
                               <li key={idx} className="text-xs text-gray-600">{instruction}</li>
                             ))}
@@ -467,13 +476,13 @@ export default function WorkoutPlanner() {
                         </div>
                       )}
                       {exercise.sets.map((set, setIdx) => (
-                        <div key={setIdx} className="flex gap-2 mb-2 items-center">
-                          <span className="text-sm text-gray-600 w-12">Set {setIdx + 1}</span>
+                        <div key={setIdx} className="flex gap-4 mb-4 items-center">
+                          <span className="text-sm text-gray-600 w-16">Set {setIdx + 1}</span>
                           <input
                             type="number"
                             value={set.reps}
                             onChange={(e) => updateSet(exIdx, setIdx, 'reps', e.target.value)}
-                            className="w-20 px-2 py-1 border border-gray-300 rounded"
+                            className="w-24 px-3 py-2 border border-gray-300 rounded"
                             placeholder="Reps"
                           />
                           <span className="text-sm text-gray-600">reps</span>
@@ -481,7 +490,7 @@ export default function WorkoutPlanner() {
                             type="number"
                             value={set.weight}
                             onChange={(e) => updateSet(exIdx, setIdx, 'weight', e.target.value)}
-                            className="w-20 px-2 py-1 border border-gray-300 rounded"
+                            className="w-24 px-3 py-2 border border-gray-300 rounded"
                             placeholder="Weight"
                           />
                           <span className="text-sm text-gray-600">lbs</span>
@@ -489,26 +498,74 @@ export default function WorkoutPlanner() {
                       ))}
                       <button
                         onClick={() => addSet(exIdx)}
-                        className="text-sm text-black hover:text-gray-700 mt-2 font-medium"
+                        className="text-sm text-black hover:text-gray-700 active:scale-95 mt-4 font-medium transition cursor-pointer"
                       >
                         + Add Set
                       </button>
                     </div>
                   ))}
+                  </div>
+                )}
+
+                {/* Always-visible search bar */}
+                <div className="mb-8 p-6 bg-gray-50 rounded-lg border border-gray-200">
+                  <input
+                    type="text"
+                    placeholder="Search exercises..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-black focus:border-black"
+                  />
+                  <div className="flex gap-3 mb-6 flex-wrap">
+                    {categories.map(cat => (
+                      <button
+                        key={cat}
+                        onClick={() => setSelectedCategory(cat)}
+                        className={`px-4 py-2 rounded-full text-sm transition active:scale-95 cursor-pointer ${
+                          selectedCategory === cat
+                            ? 'bg-black text-white border-2 border-black'
+                            : 'bg-white text-black hover:bg-gray-100 border-2 border-gray-300'
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                  {filteredExercises.length > 0 && (
+                    <div className="max-h-60 overflow-y-auto space-y-4">
+                      {filteredExercises.slice(0, 50).map((ex, idx) => (
+                        <ExercisePickerCard
+                          key={`${ex.name}-${ex.category}-${idx}`}
+                          exercise={ex}
+                          onAdd={() => addExercise(ex)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {filteredExercises.length === 0 && searchTerm && (
+                    <p className="text-center text-gray-500 py-8">No exercises found</p>
+                  )}
+                  {!searchTerm && (
+                    <p className="text-center text-gray-500 py-8 text-sm">Start typing to search for exercises</p>
+                  )}
                 </div>
+
+                {currentWorkout.exercises.length === 0 && (
+                  <p className="text-center text-gray-500 py-12">No exercises added yet. Search above to add exercises.</p>
+                )}
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex gap-4">
                 <button
                   onClick={() => setCurrentWorkout(null)}
-                  className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300 transition"
+                  className="flex-1 bg-gray-200 text-gray-800 py-4 px-6 rounded-lg hover:bg-gray-300 active:scale-95 transition cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={saveWorkout}
                   disabled={currentWorkout.exercises.length === 0}
-                  className="flex-1 bg-black text-white py-2 px-4 rounded-lg hover:bg-gray-800 transition disabled:bg-gray-400 disabled:cursor-not-allowed border-2 border-black"
+                  className="flex-1 bg-black text-white py-4 px-6 rounded-lg hover:bg-gray-800 active:scale-95 transition disabled:bg-gray-400 disabled:cursor-not-allowed disabled:active:scale-100 border-2 border-black cursor-pointer"
                 >
                   Save Workout
                 </button>
@@ -517,25 +574,25 @@ export default function WorkoutPlanner() {
           )}
         </>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-8">
           {!hasAnalysisData ? (
             <div className="bg-white rounded-lg shadow-lg border border-gray-300 p-8 text-center">
-              <p className="text-gray-700 mb-2">No workout data available for the selected time period.</p>
+              <p className="text-gray-700 mb-4">No workout data available for the selected time period.</p>
               <p className="text-sm text-gray-600">Start logging workouts to see your analysis!</p>
             </div>
           ) : (
             <>
               {/* Time Period Selector */}
-              <div className="bg-white rounded-lg shadow-lg border border-gray-300 p-4">
-                <label className="block text-sm font-medium text-black mb-2">
+              <div className="bg-white rounded-lg shadow-lg border border-gray-300 p-6">
+                <label className="block text-sm font-medium text-black mb-4">
                   Analysis Period
                 </label>
-                <div className="flex gap-2">
+                <div className="flex gap-4">
                   {([7, 14, 30] as TimePeriod[]).map(period => (
                     <button
                       key={period}
                       onClick={() => setTimePeriod(period)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition active:scale-95 cursor-pointer ${
                         timePeriod === period
                           ? 'bg-black text-white border-2 border-black'
                           : 'bg-white text-black border-2 border-gray-300 hover:bg-gray-50'
@@ -569,35 +626,37 @@ function SavedExerciseCard({ exercise }: { exercise: WorkoutExercise }) {
   const [showInstructions, setShowInstructions] = useState(false);
 
   return (
-    <div className="mb-4 last:mb-0 p-3 bg-white rounded border border-gray-200">
-      <div className="flex items-center gap-2 mb-2">
+    <div className="mb-4 last:mb-0 p-4 bg-white rounded border border-gray-200">
+      <div className="flex items-center gap-3 mb-4">
         <h4 className="font-semibold text-black">{exercise.name}</h4>
         {exercise.instructions && exercise.instructions.length > 0 && (
           <button
             onClick={() => setShowInstructions(!showInstructions)}
-            className="p-1 text-gray-500 hover:text-black transition"
+            className="p-2 text-gray-500 hover:text-black active:scale-95 transition cursor-pointer"
             title="Show instructions"
           >
             <Info size={14} />
           </button>
         )}
       </div>
-      <p className="text-xs text-gray-600 mb-2">{exercise.category} • {exercise.equipment || 'N/A'}</p>
+      <p className="text-xs text-gray-600 mb-4">{exercise.category} • {exercise.equipment || 'N/A'}</p>
       {showInstructions && exercise.instructions && exercise.instructions.length > 0 && (
-        <div className="mb-2 p-2 bg-gray-50 rounded border border-gray-300">
-          <p className="text-xs font-semibold text-black mb-1">Instructions:</p>
-          <ol className="list-decimal list-inside space-y-0.5">
+        <div className="mb-4 p-4 bg-gray-50 rounded border border-gray-300">
+          <p className="text-xs font-semibold text-black mb-3">Instructions:</p>
+          <ol className="list-decimal list-inside space-y-2">
             {exercise.instructions.map((instruction, idx) => (
               <li key={idx} className="text-xs text-gray-700">{instruction}</li>
             ))}
           </ol>
         </div>
       )}
-      {exercise.sets.map((set, setIdx) => (
-        <p key={setIdx} className="text-sm text-gray-700">
-          Set {setIdx + 1}: {set.reps} reps × {set.weight} lbs
-        </p>
-      ))}
+      <div className="space-y-2">
+        {exercise.sets.map((set, setIdx) => (
+          <p key={setIdx} className="text-sm text-gray-700">
+            Set {setIdx + 1}: {set.reps} reps × {set.weight} lbs
+          </p>
+        ))}
+      </div>
     </div>
   );
 }

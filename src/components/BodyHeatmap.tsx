@@ -85,36 +85,36 @@ export default function BodyHeatmap({ stats, timePeriod, onMuscleHover }: BodyHe
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-6 border border-gray-200 h-full flex flex-col">
-      <div className="mb-4">
-        <h3 className="text-xl font-semibold text-black mb-2">Muscle Group Heatmap</h3>
+      <div className="mb-6">
+        <h3 className="text-xl font-semibold text-black mb-4">Muscle Group Heatmap</h3>
         
         {/* Legend as subheader */}
-        <div className="flex items-center gap-3 text-xs text-gray-700 mb-3 flex-wrap">
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded" style={{ backgroundColor: '#3b82f6' }}></div>
+        <div className="flex items-center gap-4 text-xs text-gray-700 mb-4 flex-wrap">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded" style={{ backgroundColor: '#3b82f6' }}></div>
             <span className="font-medium">Cold (0 workouts)</span>
           </div>
           <span className="text-gray-400">•</span>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded" style={{ backgroundColor: '#eab308' }}></div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded" style={{ backgroundColor: '#eab308' }}></div>
             <span className="font-medium">Cool (1-2 workouts)</span>
           </div>
           <span className="text-gray-400">•</span>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded" style={{ backgroundColor: '#f97316' }}></div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded" style={{ backgroundColor: '#f97316' }}></div>
             <span className="font-medium">Warm (2-3 workouts)</span>
           </div>
           <span className="text-gray-400">•</span>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded" style={{ backgroundColor: '#ef4444' }}></div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded" style={{ backgroundColor: '#ef4444' }}></div>
             <span className="font-medium">Hot (3+ workouts)</span>
           </div>
         </div>
         
-        <div className="flex gap-2">
+        <div className="flex gap-4">
           <button
             onClick={() => setView('anterior')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition active:scale-95 cursor-pointer ${
               view === 'anterior'
                 ? 'bg-black text-white border-2 border-black'
                 : 'bg-white text-black border-2 border-gray-300 hover:bg-gray-50'
@@ -124,7 +124,7 @@ export default function BodyHeatmap({ stats, timePeriod, onMuscleHover }: BodyHe
           </button>
           <button
             onClick={() => setView('posterior')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition active:scale-95 cursor-pointer ${
               view === 'posterior'
                 ? 'bg-black text-white border-2 border-black'
                 : 'bg-white text-black border-2 border-gray-300 hover:bg-gray-50'
@@ -135,7 +135,7 @@ export default function BodyHeatmap({ stats, timePeriod, onMuscleHover }: BodyHe
         </div>
       </div>
       
-      <div className="flex flex-col items-center justify-center mb-4 flex-1 min-h-0">
+      <div className="flex flex-col items-center justify-center mb-6 flex-1 min-h-0">
         <div className="relative w-full max-w-full" style={{ maxHeight: '100%' }}>
           <div className="w-full flex justify-center" style={{ maxWidth: '100%', height: 'auto' }}>
             <Model
@@ -153,24 +153,24 @@ export default function BodyHeatmap({ stats, timePeriod, onMuscleHover }: BodyHe
       
       {/* Selected muscle info - more prominent below heatmap */}
       {selectedMuscle && (
-        <div className="mt-4 p-4 bg-gray-100 border-2 border-black rounded-lg relative">
+        <div className="mt-6 p-6 bg-gray-100 border-2 border-black rounded-lg relative">
           <button
             onClick={() => setSelectedMuscle(null)}
-            className="absolute top-2 right-2 text-black hover:text-gray-600 p-1 transition z-10 bg-white rounded"
+            className="absolute top-4 right-4 text-black hover:text-red-600 active:scale-95 p-2 transition z-10 bg-white rounded cursor-pointer"
             title="Close"
           >
             <X size={20} />
           </button>
-          <div className="pr-8">
-            <h4 className="text-lg font-bold text-black capitalize mb-1">
+          <div className="pr-12">
+            <h4 className="text-lg font-bold text-black capitalize mb-4">
               {selectedMuscle.muscleGroup}
             </h4>
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-gray-700 mb-2">
               <span className="font-semibold">Exercise Frequency:</span>{' '}
               {selectedMuscle.stat.workouts} {selectedMuscle.stat.workouts === 1 ? 'exercise' : 'exercises'} in the last {timePeriod} days
             </p>
             {selectedMuscle.stat.lastWorkedDate && (
-              <p className="text-xs text-gray-600 mt-1">
+              <p className="text-xs text-gray-600 mt-2">
                 Last worked: {new Date(selectedMuscle.stat.lastWorkedDate).toLocaleDateString()}
               </p>
             )}

@@ -30,8 +30,8 @@ export default function SuggestionsPanel({ suggestions, onAddExercise }: Suggest
   if (suggestions.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow-lg border border-gray-300 p-6 h-full flex flex-col">
-        <h3 className="text-xl font-semibold text-black mb-4">Exercise Suggestions</h3>
-        <div className="text-center py-8 text-gray-600 flex-1 flex items-center justify-center">
+        <h3 className="text-xl font-semibold text-black mb-6">Exercise Suggestions</h3>
+        <div className="text-center py-12 text-gray-600 flex-1 flex items-center justify-center">
           <p>Great job! All major muscle groups have been worked in the last week.</p>
         </div>
       </div>
@@ -41,7 +41,7 @@ export default function SuggestionsPanel({ suggestions, onAddExercise }: Suggest
   return (
     <div className="bg-white rounded-lg shadow-lg border border-gray-300 p-6 h-full flex flex-col">
       <h3 className="text-xl font-semibold text-black mb-4">Exercise Suggestions</h3>
-      <p className="text-sm text-gray-700 mb-4">
+      <p className="text-sm text-gray-700 mb-6">
         These muscle groups haven't been worked in the last week. Consider adding these exercises:
       </p>
       
@@ -60,13 +60,13 @@ export default function SuggestionsPanel({ suggestions, onAddExercise }: Suggest
             >
               <button
                 onClick={() => toggleGroup(suggestion.muscleGroup)}
-                className="w-full p-4 bg-gray-50 hover:bg-gray-100 transition flex justify-between items-center"
+                className="w-full p-4 bg-gray-50 hover:bg-gray-100 active:scale-[0.98] transition flex justify-between items-center cursor-pointer"
               >
                 <div className="text-left">
                   <h4 className="font-semibold text-black capitalize">
                     {suggestion.muscleGroup}
                   </h4>
-                  <p className="text-sm text-gray-700 mt-1">{suggestion.reason}</p>
+                  <p className="text-sm text-gray-700 mt-2">{suggestion.reason}</p>
                 </div>
                 {isGroupExpanded ? (
                   <ChevronUp className="text-gray-600" size={20} />
@@ -76,8 +76,8 @@ export default function SuggestionsPanel({ suggestions, onAddExercise }: Suggest
               </button>
 
               {isGroupExpanded && (
-                <div className="p-4 bg-white">
-                  <div className="space-y-3">
+                <div className="p-6 bg-white">
+                  <div className="space-y-4">
                     {initialExercises.map((exercise, idx) => (
                       <ExerciseCard
                         key={idx}
@@ -89,7 +89,7 @@ export default function SuggestionsPanel({ suggestions, onAddExercise }: Suggest
                     {hasMore && (
                       <>
                         {showAllExercises && (
-                          <div className="space-y-3 mt-3">
+                          <div className="space-y-4 mt-4">
                             {remainingExercises.map((exercise, idx) => (
                               <ExerciseCard
                                 key={idx + 3}
@@ -101,7 +101,7 @@ export default function SuggestionsPanel({ suggestions, onAddExercise }: Suggest
                         )}
                         <button
                           onClick={() => toggleExercises(suggestion.muscleGroup)}
-                          className="w-full text-sm text-black hover:text-gray-700 font-medium py-2 flex items-center justify-center gap-1"
+                          className="w-full text-sm text-black hover:text-gray-700 active:scale-95 font-medium py-3 flex items-center justify-center gap-2 transition cursor-pointer"
                         >
                           {showAllExercises ? (
                             <>
@@ -138,37 +138,37 @@ function ExerciseCard({ exercise, onAdd }: ExerciseCardProps) {
 
   return (
     <div className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
-      <div className="flex items-start justify-between p-3">
+      <div className="flex items-start justify-between p-4">
         <div className="flex-1">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <h5 className="font-medium text-black">{exercise.name}</h5>
             {exercise.instructions && exercise.instructions.length > 0 && (
               <button
                 onClick={() => setShowInstructions(!showInstructions)}
-                className="p-1 text-gray-500 hover:text-black transition"
+                className="p-2 text-gray-500 hover:text-black active:scale-95 transition cursor-pointer"
                 title="Show instructions"
               >
                 <Info size={14} />
               </button>
             )}
           </div>
-          <div className="flex flex-wrap gap-2 mt-1">
-            <span className="text-xs px-2 py-1 bg-gray-200 text-black rounded border border-gray-300">
+          <div className="flex flex-wrap gap-3 mt-4">
+            <span className="text-xs px-3 py-1.5 bg-gray-200 text-black rounded border border-gray-300">
               {exercise.category}
             </span>
             {exercise.equipment && (
-              <span className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded border border-gray-300">
+              <span className="text-xs px-3 py-1.5 bg-gray-100 text-gray-700 rounded border border-gray-300">
                 {exercise.equipment}
               </span>
             )}
           </div>
-          <div className="mt-2">
+          <div className="mt-4">
             <p className="text-xs text-gray-700">
               <span className="font-medium">Primary:</span>{' '}
               {exercise.primaryMuscles.join(', ') || 'N/A'}
             </p>
             {exercise.secondaryMuscles.length > 0 && (
-              <p className="text-xs text-gray-700">
+              <p className="text-xs text-gray-700 mt-2">
                 <span className="font-medium">Secondary:</span>{' '}
                 {exercise.secondaryMuscles.join(', ')}
               </p>
@@ -178,7 +178,7 @@ function ExerciseCard({ exercise, onAdd }: ExerciseCardProps) {
         {onAdd && (
           <button
             onClick={() => onAdd(exercise)}
-            className="ml-3 p-2 text-black hover:text-gray-700 hover:bg-gray-100 rounded transition border border-gray-300"
+            className="ml-4 p-3 text-black hover:text-gray-700 hover:bg-gray-100 active:scale-95 rounded transition border border-gray-300 cursor-pointer"
             title="Add to workout"
           >
             <Plus size={18} />
@@ -186,9 +186,9 @@ function ExerciseCard({ exercise, onAdd }: ExerciseCardProps) {
         )}
       </div>
       {showInstructions && exercise.instructions && exercise.instructions.length > 0 && (
-        <div className="px-3 pb-3 pt-2 bg-white border-t border-gray-200">
-          <p className="text-xs font-semibold text-black mb-2">Instructions:</p>
-          <ol className="list-decimal list-inside space-y-1">
+        <div className="px-4 pb-4 pt-3 bg-white border-t border-gray-200">
+          <p className="text-xs font-semibold text-black mb-3">Instructions:</p>
+          <ol className="list-decimal list-inside space-y-2">
             {exercise.instructions.map((instruction, idx) => (
               <li key={idx} className="text-xs text-gray-700">{instruction}</li>
             ))}

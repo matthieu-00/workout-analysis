@@ -157,6 +157,7 @@ export function generateSuggestions(
     const topExercises = matchingExercises
       .slice(0, limitPerGroup)
       .map((exerciseWithPriority) => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { _priority, ...exercise } = exerciseWithPriority as Exercise & { _priority: number };
         return exercise;
       });

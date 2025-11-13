@@ -4,10 +4,9 @@ import { Plus, ChevronDown, ChevronUp, Info } from 'lucide-react';
 
 interface SuggestionsPanelProps {
   suggestions: Suggestion[];
-  onAddExercise?: (exercise: Exercise) => void;
 }
 
-export default function SuggestionsPanel({ suggestions, onAddExercise }: SuggestionsPanelProps) {
+export default function SuggestionsPanel({ suggestions }: SuggestionsPanelProps) {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [expandedExercises, setExpandedExercises] = useState<Map<string, boolean>>(new Map());
 

@@ -458,8 +458,9 @@ export default function WorkoutPlanner() {
                               <button
                                 onClick={() => {
                                   const updated = { ...currentWorkout };
-                                  const currentShow = (updated.exercises[exIdx] as any)._showInstructions || false;
-                                  (updated.exercises[exIdx] as any)._showInstructions = !currentShow;
+                                  const exercise = updated.exercises[exIdx] as WorkoutExercise & { _showInstructions?: boolean };
+                                  const currentShow = exercise._showInstructions || false;
+                                  exercise._showInstructions = !currentShow;
                                   setCurrentWorkout(updated);
                                 }}
                                 className="p-2 text-gray-500 hover:text-black active:scale-95 transition cursor-pointer"
@@ -482,7 +483,7 @@ export default function WorkoutPlanner() {
                           <X size={18} />
                         </button>
                       </div>
-                      {(exercise as any)._showInstructions && exercise.instructions && exercise.instructions.length > 0 && (
+                      {(exercise as WorkoutExercise & { _showInstructions?: boolean })._showInstructions && exercise.instructions && exercise.instructions.length > 0 && (
                         <div className="mb-4 p-4 bg-gray-50 rounded border border-gray-200">
                           <p className="text-xs font-semibold text-gray-700 mb-3">Instructions:</p>
                           <ol className="list-decimal list-inside space-y-2">

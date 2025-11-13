@@ -72,7 +72,7 @@ export default function BodyHeatmap({ stats, timePeriod, onMuscleHover }: BodyHe
     return data.length > 0 ? data : [];
   }, [stats]);
 
-  const handleMuscleClick = ({ muscle }: { muscle: string; data?: any }) => {
+  const handleMuscleClick = ({ muscle }: { muscle: string; data?: unknown }) => {
     const muscleGroup = getMuscleGroupFromHighlighterName(muscle);
     if (muscleGroup) {
       onMuscleHover?.(muscleGroup);
@@ -139,6 +139,7 @@ export default function BodyHeatmap({ stats, timePeriod, onMuscleHover }: BodyHe
         <div className="relative w-full max-w-full" style={{ maxHeight: '100%' }}>
           <div className="w-full flex justify-center" style={{ maxWidth: '100%', height: 'auto' }}>
             <Model
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               data={modelData as any}
               type={view}
               bodyColor="#e5e7eb"

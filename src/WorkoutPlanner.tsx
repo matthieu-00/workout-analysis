@@ -538,7 +538,7 @@ export default function WorkoutPlanner() {
                   />
                   <div className="mb-6">
                     <div className="flex items-center gap-4 flex-wrap">
-                      <span className="text-sm font-medium text-black">Filters:</span>
+                      <span className="text-sm font-medium text-black">Filters: </span>
                       {categories.map(cat => (
                         <button
                           key={cat}

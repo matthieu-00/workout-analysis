@@ -82,7 +82,6 @@ export default function SuggestionsPanel({ suggestions, onAddExercise }: Suggest
                       <ExerciseCard
                         key={idx}
                         exercise={exercise}
-                        onAdd={onAddExercise}
                       />
                     ))}
                     
@@ -94,7 +93,6 @@ export default function SuggestionsPanel({ suggestions, onAddExercise }: Suggest
                               <ExerciseCard
                                 key={idx + 3}
                                 exercise={exercise}
-                                onAdd={onAddExercise}
                               />
                             ))}
                           </div>

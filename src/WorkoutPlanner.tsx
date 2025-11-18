@@ -72,6 +72,8 @@ export default function WorkoutPlanner() {
   const [editingWorkoutId, setEditingWorkoutId] = useState<number | null>(null);
   const [addExerciseSearchTerm, setAddExerciseSearchTerm] = useState('');
   const [addExerciseCategory, setAddExerciseCategory] = useState('all');
+  const [showAllExercises, setShowAllExercises] = useState(false);
+  const [showAllExercisesForAdd, setShowAllExercisesForAdd] = useState(false);
 
   // Fetch exercises from GitHub Gist on component mount
   useEffect(() => {
@@ -119,6 +121,16 @@ export default function WorkoutPlanner() {
   useEffect(() => {
     localStorage.setItem('workoutPlanner', JSON.stringify({ workouts }));
   }, [workouts]);
+
+  // Reset showAllExercises when search term or category filter changes
+  useEffect(() => {
+    setShowAllExercises(false);
+  }, [searchTerm, selectedCategory]);
+
+  // Reset showAllExercisesForAdd when search term or category filter changes
+  useEffect(() => {
+    setShowAllExercisesForAdd(false);
+  }, [addExerciseSearchTerm, addExerciseCategory]);
 
   const startNewWorkout = () => {
     setCurrentWorkout({
@@ -635,28 +647,62 @@ export default function WorkoutPlanner() {
                                               ))}
                                             </div>
                                           </div>
-                                          {filteredExercisesForAdd.length > 0 && (
+                                          <h3 className="text-lg font-semibold text-black mb-4">Exercises</h3>
+                                          {filteredExercisesForAdd.length > 0 ? (
                                             <>
-                                              <h3 className="text-lg font-semibold text-black mb-4">Exercises</h3>
-                                              <div className="max-h-60 overflow-y-auto space-y-4">
-                                                {filteredExercisesForAdd.slice(0, 50).map((ex, idx) => (
-                                                  <ExercisePickerCard
-                                                    key={`add-${ex.name}-${ex.category}-${idx}`}
-                                                    exercise={ex}
-                                                    onAdd={() => addExerciseToWorkout(workout.id, ex)}
-                                                  />
-                                                ))}
-                                              </div>
+                                              {!addExerciseSearchTerm ? (
+                                                // When search is empty, show all exercises in scrollable container
+                                                <div className="max-h-96 overflow-y-auto space-y-4">
+                                                  {filteredExercisesForAdd.map((ex, idx) => (
+                                                    <ExercisePickerCard
+                                                      key={`add-${ex.name}-${ex.category}-${idx}`}
+                                                      exercise={ex}
+                                                      onAdd={() => addExerciseToWorkout(workout.id, ex)}
+                                                    />
+                                                  ))}
+                                                </div>
+                                              ) : (
+                                                // When typing, show top 10 initially, then all when expanded
+                                                <>
+                                                  {showAllExercisesForAdd ? (
+                                                    <div className="max-h-96 overflow-y-auto space-y-4">
+                                                      {filteredExercisesForAdd.map((ex, idx) => (
+                                                        <ExercisePickerCard
+                                                          key={`add-${ex.name}-${ex.category}-${idx}`}
+                                                          exercise={ex}
+                                                          onAdd={() => addExerciseToWorkout(workout.id, ex)}
+                                                        />
+                                                      ))}
+                                                    </div>
+                                                  ) : (
+                                                    <>
+                                                      <div className="space-y-4">
+                                                        {filteredExercisesForAdd.slice(0, 10).map((ex, idx) => (
+                                                          <ExercisePickerCard
+                                                            key={`add-${ex.name}-${ex.category}-${idx}`}
+                                                            exercise={ex}
+                                                            onAdd={() => addExerciseToWorkout(workout.id, ex)}
+                                                          />
+                                                        ))}
+                                                      </div>
+                                                      {filteredExercisesForAdd.length > 10 && (
+                                                        <button
+                                                          onClick={() => setShowAllExercisesForAdd(true)}
+                                                          className="w-full text-sm text-blue-600 hover:text-blue-700 active:scale-95 font-semibold py-3 flex items-center justify-center gap-2 transition cursor-pointer mt-4"
+                                                        >
+                                                          <ChevronDown size={16} />
+                                                          Show More Exercises ({filteredExercisesForAdd.length - 10} more)
+                                                        </button>
+                                                      )}
+                                                    </>
+                                                  )}
+                                                </>
+                                              )}
                                             </>
-                                          )}
-                                          {filteredExercisesForAdd.length === 0 && addExerciseSearchTerm && (
-                                            <>
-                                              <h3 className="text-lg font-semibold text-black mb-4">Exercises</h3>
-                                              <p className="text-center text-gray-500 py-8">No exercises found</p>
-                                            </>
-                                          )}
-                                          {!addExerciseSearchTerm && (
-                                            <p className="text-center text-gray-500 py-8 text-sm">Start typing to search for exercises</p>
+                                          ) : (
+                                            <p className="text-center text-gray-500 py-8">
+                                              {addExerciseSearchTerm ? 'No exercises found' : 'No exercises available'}
+                                            </p>
                                           )}
                                         </div>
                                       </>
@@ -710,7 +756,7 @@ export default function WorkoutPlanner() {
               </div>
             </>
           ) : (
-            <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4 md:p-6 overflow-x-hidden">
+            <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4 md:p-6">
           <div className="mb-8">
             <div className="flex items-end gap-4 mb-8">
               <div className="flex-1">
@@ -741,11 +787,11 @@ export default function WorkoutPlanner() {
             </div>
           </div>
 
-              <div className="mb-8">
+              <div className="mb-8 -mx-4 md:-mx-6 px-4 md:px-6">
                 {/* Added exercises - shown first, right below search */}
                 {currentWorkout.exercises.length > 0 && (
                   <div className="mb-8 space-y-4">
-                    <div className="border-t-2 border-b-2 border-green-500 py-4 mb-6 bg-green-50 rounded-lg">
+                    <div className="border-t-2 border-b-2 border-green-500 py-4 px-4 mb-6 bg-green-50 rounded-lg">
                       <h4 className="text-sm font-semibold text-green-800 uppercase tracking-wide">Added Exercises</h4>
                     </div>
                     {currentWorkout.exercises.map((exercise, exIdx) => {
@@ -897,28 +943,62 @@ export default function WorkoutPlanner() {
                       ))}
                     </div>
                   </div>
-                  {filteredExercises.length > 0 && (
+                  <h3 className="text-lg font-semibold text-black mb-4">Exercises</h3>
+                  {filteredExercises.length > 0 ? (
                     <>
-                      <h3 className="text-lg font-semibold text-black mb-4">Exercises</h3>
-                      <div className="max-h-60 overflow-y-auto space-y-4">
-                      {filteredExercises.slice(0, 50).map((ex, idx) => (
-                        <ExercisePickerCard
-                          key={`${ex.name}-${ex.category}-${idx}`}
-                          exercise={ex}
-                          onAdd={() => addExercise(ex)}
-                        />
-                      ))}
-                      </div>
+                      {!searchTerm ? (
+                        // When search is empty, show all exercises in scrollable container
+                        <div className="max-h-96 overflow-y-auto space-y-4">
+                          {filteredExercises.map((ex, idx) => (
+                            <ExercisePickerCard
+                              key={`${ex.name}-${ex.category}-${idx}`}
+                              exercise={ex}
+                              onAdd={() => addExercise(ex)}
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        // When typing, show top 10 initially, then all when expanded
+                        <>
+                          {showAllExercises ? (
+                            <div className="max-h-96 overflow-y-auto space-y-4">
+                              {filteredExercises.map((ex, idx) => (
+                                <ExercisePickerCard
+                                  key={`${ex.name}-${ex.category}-${idx}`}
+                                  exercise={ex}
+                                  onAdd={() => addExercise(ex)}
+                                />
+                              ))}
+                            </div>
+                          ) : (
+                            <>
+                              <div className="space-y-4">
+                                {filteredExercises.slice(0, 10).map((ex, idx) => (
+                                  <ExercisePickerCard
+                                    key={`${ex.name}-${ex.category}-${idx}`}
+                                    exercise={ex}
+                                    onAdd={() => addExercise(ex)}
+                                  />
+                                ))}
+                              </div>
+                              {filteredExercises.length > 10 && (
+                                <button
+                                  onClick={() => setShowAllExercises(true)}
+                                  className="w-full text-sm text-blue-600 hover:text-blue-700 active:scale-95 font-semibold py-3 flex items-center justify-center gap-2 transition cursor-pointer mt-4"
+                                >
+                                  <ChevronDown size={16} />
+                                  Show More Exercises ({filteredExercises.length - 10} more)
+                                </button>
+                              )}
+                            </>
+                          )}
+                        </>
+                      )}
                     </>
-                  )}
-                  {filteredExercises.length === 0 && searchTerm && (
-                    <>
-                      <h3 className="text-lg font-semibold text-black mb-4">Exercises</h3>
-                      <p className="text-center text-gray-500 py-8">No exercises found</p>
-                    </>
-                  )}
-                  {!searchTerm && (
-                    <p className="text-center text-gray-500 py-8 text-sm">Start typing to search for exercises</p>
+                  ) : (
+                    <p className="text-center text-gray-500 py-8">
+                      {searchTerm ? 'No exercises found' : 'No exercises available'}
+                    </p>
                   )}
                 </div>
 

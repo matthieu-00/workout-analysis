@@ -67,6 +67,10 @@ export default function WorkoutPlanner() {
   const [viewMode, setViewMode] = useState<ViewMode>('workouts');
   const [timePeriod, setTimePeriod] = useState<TimePeriod>(7);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [editingWorkoutId, setEditingWorkoutId] = useState<number | null>(null);
+  const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
+  const [addExerciseSearchTerm, setAddExerciseSearchTerm] = useState('');
+  const [addExerciseCategory, setAddExerciseCategory] = useState('all');
 
   // Fetch exercises from GitHub Gist on component mount
   useEffect(() => {
@@ -139,6 +143,32 @@ export default function WorkoutPlanner() {
       };
     });
   };
+
+  const addExerciseToWorkout = (workoutId: number, exercise: Exercise) => {
+    const workoutExercise: WorkoutExercise = {
+      ...exercise,
+      sets: [{ reps: 10, weight: 0 }]
+    };
+    
+    const updatedWorkouts = workouts.map(w => 
+      w.id === workoutId 
+        ? { ...w, exercises: [...w.exercises, workoutExercise] }
+        : w
+    );
+    
+    setWorkouts(updatedWorkouts);
+    setShowAddExerciseModal(false);
+    setAddExerciseSearchTerm('');
+    setAddExerciseCategory('all');
+  };
+
+  const filteredExercisesForAdd = useMemo(() => {
+    return exerciseDB.filter(ex => {
+      const matchesSearch = ex.name.toLowerCase().includes(addExerciseSearchTerm.toLowerCase());
+      const matchesCategory = addExerciseCategory === 'all' || ex.category === addExerciseCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [exerciseDB, addExerciseSearchTerm, addExerciseCategory]);
 
   const updateSet = (exerciseIndex: number, setIndex: number, field: 'reps' | 'weight', value: string) => {
     if (!currentWorkout) return;
@@ -318,17 +348,17 @@ export default function WorkoutPlanner() {
               <div className="flex gap-4 mb-8">
                 <button
                   onClick={startNewWorkout}
-                  className="flex-1 bg-blue-500 text-white py-2 px-4 rounded font-semibold flex items-center justify-center gap-2 hover:bg-blue-600"
+                  className="flex-1 bg-blue-500 text-white py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-blue-600 shadow-lg hover:shadow-xl transition-all text-base active:scale-95"
                 >
-                  <Plus size={18} />
+                  <Plus size={20} />
                   Start New Workout
                 </button>
                 {workouts.length > 0 && (
                   <button
                     onClick={() => setShowClearConfirm(true)}
-                    className="bg-red-500 text-white py-2 px-4 rounded font-semibold flex items-center justify-center gap-2 hover:bg-red-600"
+                    className="bg-red-500 text-white py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-red-600 shadow-lg hover:shadow-xl transition-all active:scale-95"
                   >
-                    <Trash2 size={18} />
+                    <Trash2 size={20} />
                     Clear All
                   </button>
                 )}
@@ -364,31 +394,40 @@ export default function WorkoutPlanner() {
                         return (
                           <div key={dateKey} className="space-y-4">
                             {/* Date Header */}
-                            <div className="flex items-center gap-4">
-                              <Calendar className="text-black" size={20} />
-                              <h3 className="text-lg font-semibold text-black">
-                                {displayDate.toLocaleDateString('en-US', { 
-                                  weekday: 'long', 
-                                  year: 'numeric', 
-                                  month: 'long', 
-                                  day: 'numeric' 
-                                })}
-                              </h3>
+                            <div className="flex items-center gap-4 mb-2">
+                              <div className="p-2 bg-blue-100 rounded-lg">
+                                <Calendar className="text-blue-600" size={24} />
+                              </div>
+                              <div>
+                                <h3 className="text-xl font-bold text-gray-900">
+                                  {displayDate.toLocaleDateString('en-US', { 
+                                    weekday: 'long', 
+                                    year: 'numeric', 
+                                    month: 'long', 
+                                    day: 'numeric' 
+                                  })}
+                                </h3>
+                                <div className="h-1 w-16 bg-blue-500 rounded-full mt-2"></div>
+                              </div>
                             </div>
                             
                             {/* Workouts for this day */}
                             {dayWorkouts.map((workout, workoutIndex) => (
-                              <div key={workout.id} className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden ml-8">
+                              <div key={workout.id} className="bg-white rounded-lg shadow-lg border-l-4 border-l-blue-500 border border-gray-200 overflow-hidden ml-8 hover:shadow-xl transition-all">
                                 <div 
-                                  className="p-4 md:p-6 flex justify-between items-center cursor-pointer hover:bg-gray-50 active:scale-[0.98] transition"
+                                  className="p-4 md:p-6 flex justify-between items-center cursor-pointer hover:bg-blue-50 active:scale-[0.98] transition"
                                   onClick={() => setExpandedWorkout(expandedWorkout === workout.id ? null : workout.id)}
                                 >
                                   <div className="flex items-center gap-4">
                                   <div>
-                                    <p className="font-semibold text-black">
+                                    <p className="font-bold text-lg text-black">
                                       Workout {workoutIndex + 1}
                                     </p>
-                                    <p className="text-sm text-gray-700 mt-2">{workout.exercises.length} {workout.exercises.length === 1 ? 'exercise' : 'exercises'}</p>
+                                    <div className="flex items-center gap-2 mt-2">
+                                      <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold">
+                                        {workout.exercises.length} {workout.exercises.length === 1 ? 'exercise' : 'exercises'}
+                                      </span>
+                                    </div>
                                   </div>
                                   </div>
                                   <div className="flex items-center gap-4">
@@ -406,12 +445,28 @@ export default function WorkoutPlanner() {
                                 </div>
                                 
                                 {expandedWorkout === workout.id && (
-                                  <div className="p-6 bg-gray-50 border-t">
+                                  <div className="p-6 bg-gradient-to-br from-gray-50 to-blue-50 border-t border-blue-200">
+                                    <div className="mb-4">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setEditingWorkoutId(workout.id);
+                                          setShowAddExerciseModal(true);
+                                        }}
+                                        className="bg-green-500 text-white px-4 py-2 rounded-lg font-semibold text-sm hover:bg-green-600 shadow-md hover:shadow-lg transition-all flex items-center gap-2 active:scale-95"
+                                      >
+                                        <Plus size={16} />
+                                        Add Exercise
+                                      </button>
+                                    </div>
                                     {workout.exercises.map((exercise, idx) => (
                                       <div key={idx} className="mb-4 last:mb-0">
                                         <SavedExerciseCard exercise={exercise} />
                                       </div>
                                     ))}
+                                    {workout.exercises.length === 0 && (
+                                      <p className="text-gray-500 text-center py-4">No exercises yet. Click "Add Exercise" to get started.</p>
+                                    )}
                                   </div>
                                 )}
                               </div>
@@ -447,8 +502,9 @@ export default function WorkoutPlanner() {
                 <button
                   onClick={saveWorkout}
                   disabled={currentWorkout.exercises.length === 0}
-                  className="bg-green-500 text-white py-2 px-4 rounded font-semibold text-sm hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed active:scale-95 transition"
+                  className="bg-green-500 text-white py-3 px-6 rounded-lg font-semibold text-base hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed active:scale-95 transition shadow-lg hover:shadow-xl disabled:shadow-none flex items-center gap-2"
                 >
+                  {currentWorkout.exercises.length > 0 && <Plus size={18} />}
                   Save Workout
                 </button>
               </div>
@@ -459,8 +515,8 @@ export default function WorkoutPlanner() {
                 {/* Added exercises - shown first, right below search */}
                 {currentWorkout.exercises.length > 0 && (
                   <div className="mb-8 space-y-4">
-                    <div className="border-t-2 border-b-2 border-black py-4 mb-6">
-                      <h4 className="text-sm font-semibold text-black uppercase tracking-wide">Added Exercises</h4>
+                    <div className="border-t-2 border-b-2 border-green-500 py-4 mb-6 bg-green-50 rounded-lg">
+                      <h4 className="text-sm font-semibold text-green-800 uppercase tracking-wide">Added Exercises</h4>
                     </div>
                     {currentWorkout.exercises.map((exercise, exIdx) => (
                     <div key={exIdx} className="p-4 md:p-6 bg-white rounded-lg border border-gray-200 shadow-sm overflow-x-hidden">
@@ -540,9 +596,12 @@ export default function WorkoutPlanner() {
                 )}
 
                 {/* Always-visible search bar */}
-                <div className="mb-8 p-4 md:p-6 bg-gray-50 rounded-lg border border-gray-200 overflow-x-hidden">
+                <div className="mb-8 p-4 md:p-6 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border-2 border-blue-200 overflow-x-hidden shadow-md">
                   <div className="mb-4">
-                    <h4 className="text-xs font-semibold text-black uppercase tracking-wide mb-3">Search</h4>
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="h-1 w-8 bg-blue-500 rounded-full"></div>
+                      <h4 className="text-xs font-bold text-blue-800 uppercase tracking-wide">Search Exercises</h4>
+                    </div>
                   </div>
                   <input
                     type="text"
@@ -643,6 +702,87 @@ export default function WorkoutPlanner() {
               </div>
             </>
           )}
+        </div>
+      )}
+
+      {/* Add Exercise Modal for Existing Workouts */}
+      {showAddExerciseModal && editingWorkoutId && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 p-4 overflow-y-auto" 
+          onClick={() => {
+            setShowAddExerciseModal(false);
+            setEditingWorkoutId(null);
+            setAddExerciseSearchTerm('');
+            setAddExerciseCategory('all');
+          }}
+        >
+          <div 
+            className="bg-white w-full md:w-[600px] rounded-lg shadow-xl p-4 md:p-6 my-4 max-h-[90vh] overflow-y-auto" 
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">Add Exercise to Workout</h3>
+                <p className="text-sm text-gray-600 mt-1">Search and select exercises to add</p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowAddExerciseModal(false);
+                  setEditingWorkoutId(null);
+                  setAddExerciseSearchTerm('');
+                  setAddExerciseCategory('all');
+                }}
+                className="p-2 hover:bg-gray-200 rounded-lg transition"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="mb-6">
+              <input
+                type="text"
+                placeholder="Search exercises..."
+                value={addExerciseSearchTerm}
+                onChange={(e) => setAddExerciseSearchTerm(e.target.value)}
+                className="w-full px-4 py-3 border-2 border-blue-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            <div className="mb-6">
+              <div className="flex items-center gap-4 flex-wrap">
+                <span className="text-sm font-semibold text-gray-700">Filters: </span>
+                {categories.map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => setAddExerciseCategory(cat)}
+                    className={`px-4 py-2 rounded-full text-sm transition active:scale-95 cursor-pointer font-semibold ${
+                      addExerciseCategory === cat
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-white text-gray-700 border hover:bg-gray-50'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {filteredExercisesForAdd.length > 0 ? (
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {filteredExercisesForAdd.slice(0, 50).map((ex, idx) => (
+                  <ExercisePickerCard
+                    key={`add-${ex.name}-${ex.category}-${idx}`}
+                    exercise={ex}
+                    onAdd={() => addExerciseToWorkout(editingWorkoutId, ex)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-gray-500">
+                <p>No exercises found matching your search.</p>
+              </div>
+            )}
+          </div>
         </div>
       )}
       </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Calendar, Plus, X, ChevronDown, ChevronUp, Trash2, BarChart3, Activity, Info, RefreshCw, AlertCircle } from 'lucide-react';
+import { Calendar, Plus, ChevronDown, ChevronUp, Trash2, BarChart3, Activity, Info, RefreshCw, AlertCircle } from 'lucide-react';
 import type { Workout, Exercise, WorkoutExercise, TimePeriod } from './types/workout';
 import { analyzeMuscleGroups, getUnderworkedMuscles, generateSuggestions } from './utils/workoutAnalysis';
 import BodyHeatmap from './components/BodyHeatmap';
@@ -67,6 +67,8 @@ export default function WorkoutPlanner() {
   const [viewMode, setViewMode] = useState<ViewMode>('workouts');
   const [timePeriod, setTimePeriod] = useState<TimePeriod>(7);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showDeleteWorkoutConfirm, setShowDeleteWorkoutConfirm] = useState<{ workoutId: number; workoutName: string } | null>(null);
+  const [showDeleteExerciseConfirm, setShowDeleteExerciseConfirm] = useState<{ workoutId: number; exerciseIndex: number; exerciseName: string } | null>(null);
   const [editingWorkoutId, setEditingWorkoutId] = useState<number | null>(null);
   const [addExerciseSearchTerm, setAddExerciseSearchTerm] = useState('');
   const [addExerciseCategory, setAddExerciseCategory] = useState('all');
@@ -227,6 +229,18 @@ export default function WorkoutPlanner() {
     setWorkouts(updatedWorkouts);
   };
 
+  const deleteExerciseFromWorkout = (workoutId: number, exerciseIndex: number) => {
+    const updatedWorkouts = workouts.map(w => {
+      if (w.id === workoutId) {
+        const updated = { ...w };
+        updated.exercises.splice(exerciseIndex, 1);
+        return updated;
+      }
+      return w;
+    });
+    setWorkouts(updatedWorkouts);
+  };
+
   const saveWorkout = () => {
     if (currentWorkout && currentWorkout.exercises.length > 0) {
       setWorkouts([...workouts, currentWorkout]);
@@ -348,11 +362,11 @@ export default function WorkoutPlanner() {
       {/* Clear All Confirmation Modal */}
       {showClearConfirm && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 p-4 overflow-y-auto" 
+          className="fixed inset-0 bg-gray-900 bg-opacity-30 backdrop-blur-sm flex items-start justify-center z-50 p-4 overflow-y-auto" 
           onClick={() => setShowClearConfirm(false)}
         >
           <div 
-            className="bg-white w-full md:w-96 rounded-lg p-4 md:p-6 my-4 shadow-md" 
+            className="bg-white w-full md:w-96 rounded-lg p-4 md:p-6 my-4 shadow-xl border border-gray-200" 
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-3 mb-4">
@@ -360,18 +374,103 @@ export default function WorkoutPlanner() {
               <h3 className="text-lg font-bold">Confirm Delete</h3>
             </div>
             <p className="text-gray-700 mb-6">
-              Are you sure you want to delete all <span className="font-semibold">{workouts.length}</span> workout{workouts.length === 1 ? '' : 's'}? This cannot be undone.
+              Are you sure you want to delete {workouts.length === 1 ? 'this workout' : `all ${workouts.length} workouts`}? This cannot be undone.
             </p>
             <div className="flex gap-3">
               <button
                 onClick={() => setShowClearConfirm(false)}
-                className="flex-1 bg-gray-300 text-gray-800 py-2 px-4 rounded font-semibold text-sm hover:bg-gray-400"
+                className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg font-semibold text-sm hover:bg-gray-300 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={clearAllWorkouts}
-                className="flex-1 bg-red-500 text-white py-2 px-4 rounded font-semibold text-sm hover:bg-red-600"
+                className="flex-1 bg-red-500 text-white py-2 px-4 rounded-lg font-semibold text-sm hover:bg-red-600 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Workout Confirmation Modal */}
+      {showDeleteWorkoutConfirm && (
+        <div 
+          className="fixed inset-0 bg-gray-900 bg-opacity-30 backdrop-blur-sm flex items-start justify-center z-50 p-4 overflow-y-auto" 
+          onClick={() => setShowDeleteWorkoutConfirm(null)}
+        >
+          <div 
+            className="bg-white w-full md:w-96 rounded-lg p-4 md:p-6 my-4 shadow-xl border border-gray-200" 
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <AlertCircle size={24} className="text-red-500" />
+              <h3 className="text-lg font-bold">Confirm Delete Workout</h3>
+            </div>
+            <p className="text-gray-700 mb-6">
+              Are you sure you want to delete <span className="font-semibold">"{showDeleteWorkoutConfirm.workoutName}"</span>? This cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteWorkoutConfirm(null)}
+                className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg font-semibold text-sm hover:bg-gray-300 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  deleteWorkout(showDeleteWorkoutConfirm.workoutId);
+                  setShowDeleteWorkoutConfirm(null);
+                }}
+                className="flex-1 bg-red-500 text-white py-2 px-4 rounded-lg font-semibold text-sm hover:bg-red-600 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Exercise Confirmation Modal */}
+      {showDeleteExerciseConfirm && (
+        <div 
+          className="fixed inset-0 bg-gray-900 bg-opacity-30 backdrop-blur-sm flex items-start justify-center z-50 p-4 overflow-y-auto" 
+          onClick={() => setShowDeleteExerciseConfirm(null)}
+        >
+          <div 
+            className="bg-white w-full md:w-96 rounded-lg p-4 md:p-6 my-4 shadow-xl border border-gray-200" 
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <AlertCircle size={24} className="text-red-500" />
+              <h3 className="text-lg font-bold">Confirm Delete Exercise</h3>
+            </div>
+            <p className="text-gray-700 mb-6">
+              Are you sure you want to delete <span className="font-semibold">"{showDeleteExerciseConfirm.exerciseName}"</span>? This cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteExerciseConfirm(null)}
+                className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg font-semibold text-sm hover:bg-gray-300 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  // Check if it's a new workout (currentWorkout) or saved workout
+                  if (currentWorkout && currentWorkout.id === showDeleteExerciseConfirm.workoutId) {
+                    // Delete from current workout
+                    const updated = { ...currentWorkout };
+                    updated.exercises.splice(showDeleteExerciseConfirm.exerciseIndex, 1);
+                    setCurrentWorkout(updated);
+                  } else {
+                    // Delete from saved workout
+                    deleteExerciseFromWorkout(showDeleteExerciseConfirm.workoutId, showDeleteExerciseConfirm.exerciseIndex);
+                  }
+                  setShowDeleteExerciseConfirm(null);
+                }}
+                className="flex-1 bg-red-500 text-white py-2 px-4 rounded-lg font-semibold text-sm hover:bg-red-600 transition-colors"
               >
                 Delete
               </button>
@@ -473,9 +572,13 @@ export default function WorkoutPlanner() {
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        deleteWorkout(workout.id);
+                                        setShowDeleteWorkoutConfirm({
+                                          workoutId: workout.id,
+                                          workoutName: `Workout ${workoutIndex + 1}`
+                                        });
                                       }}
                                       className="text-black hover:text-red-600 active:scale-95 p-2 transition cursor-pointer"
+                                      title="Delete workout"
                                     >
                                       <Trash2 size={18} />
                                     </button>
@@ -581,6 +684,13 @@ export default function WorkoutPlanner() {
                                           exerciseIndex={idx}
                                           onUpdateSet={updateSetInWorkout}
                                           onAddSet={addSetToWorkout}
+                                          onDeleteRequest={(workoutId, exerciseIndex, exerciseName) => {
+                                            setShowDeleteExerciseConfirm({
+                                              workoutId,
+                                              exerciseIndex,
+                                              exerciseName
+                                            });
+                                          }}
                                         />
                                       </div>
                                     ))}
@@ -638,95 +748,119 @@ export default function WorkoutPlanner() {
                     <div className="border-t-2 border-b-2 border-green-500 py-4 mb-6 bg-green-50 rounded-lg">
                       <h4 className="text-sm font-semibold text-green-800 uppercase tracking-wide">Added Exercises</h4>
                     </div>
-                    {currentWorkout.exercises.map((exercise, exIdx) => (
-                    <div key={exIdx} className="p-4 md:p-6 bg-white rounded-lg border border-gray-200 shadow-sm overflow-x-hidden">
-                      <div className="flex justify-between items-start mb-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3">
-                            <h4 className="font-semibold text-black">{exercise.name}</h4>
-                            {exercise.instructions && exercise.instructions.length > 0 && (
-                              <button
-                                onClick={() => {
-                                  const updated = { ...currentWorkout };
-                                  const exercise = updated.exercises[exIdx] as WorkoutExercise & { _showInstructions?: boolean };
-                                  const currentShow = exercise._showInstructions || false;
-                                  exercise._showInstructions = !currentShow;
-                                  setCurrentWorkout(updated);
-                                }}
-                                className="p-2 text-gray-500 hover:text-black active:scale-95 transition cursor-pointer"
-                                title="Show instructions"
-                              >
-                                <Info size={16} />
-                              </button>
-                            )}
+                    {currentWorkout.exercises.map((exercise, exIdx) => {
+                      const exerciseWithState = exercise as WorkoutExercise & { _showInstructions?: boolean; _collapsed?: boolean };
+                      const isCollapsed = exerciseWithState._collapsed || false;
+                      
+                      return (
+                        <div key={exIdx} className="p-4 md:p-6 bg-white rounded-lg border border-gray-200 shadow-sm overflow-x-hidden">
+                          <div className="flex justify-between items-start mb-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3">
+                                <button
+                                  onClick={() => {
+                                    const updated = { ...currentWorkout };
+                                    const ex = updated.exercises[exIdx] as WorkoutExercise & { _collapsed?: boolean };
+                                    ex._collapsed = !(ex._collapsed || false);
+                                    setCurrentWorkout(updated);
+                                  }}
+                                  className="p-1 text-gray-500 hover:text-black active:scale-95 transition cursor-pointer"
+                                  title={isCollapsed ? "Expand exercise" : "Collapse exercise"}
+                                >
+                                  {isCollapsed ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
+                                </button>
+                                <h4 className="font-semibold text-black">{exercise.name}</h4>
+                                {exercise.instructions && exercise.instructions.length > 0 && (
+                                  <button
+                                    onClick={() => {
+                                      const updated = { ...currentWorkout };
+                                      const ex = updated.exercises[exIdx] as WorkoutExercise & { _showInstructions?: boolean };
+                                      const currentShow = ex._showInstructions || false;
+                                      ex._showInstructions = !currentShow;
+                                      setCurrentWorkout(updated);
+                                    }}
+                                    className="p-2 text-gray-500 hover:text-black active:scale-95 transition cursor-pointer"
+                                    title="Show instructions"
+                                  >
+                                    <Info size={16} />
+                                  </button>
+                                )}
+                              </div>
+                              <p className="text-xs text-gray-600 mt-2 mb-4">{exercise.category}</p>
+                            </div>
+                            <button
+                              onClick={() => {
+                                setShowDeleteExerciseConfirm({
+                                  workoutId: currentWorkout.id,
+                                  exerciseIndex: exIdx,
+                                  exerciseName: exercise.name
+                                });
+                              }}
+                              className="text-black hover:text-red-600 active:scale-95 ml-4 transition cursor-pointer"
+                              title="Delete exercise"
+                            >
+                              <Trash2 size={16} />
+                            </button>
                           </div>
-                          <p className="text-xs text-gray-600 mt-2 mb-4">{exercise.category}</p>
+                          {!isCollapsed && (
+                            <>
+                              {exerciseWithState._showInstructions && exercise.instructions && exercise.instructions.length > 0 && (
+                                <div className="mb-4 p-4 bg-gray-50 rounded border border-gray-200">
+                                  <p className="text-xs font-semibold text-gray-700 mb-3">Instructions:</p>
+                                  <ol className="list-decimal list-inside space-y-2">
+                                    {exercise.instructions.map((instruction, idx) => (
+                                      <li key={idx} className="text-xs text-gray-600">{instruction}</li>
+                                    ))}
+                                  </ol>
+                                </div>
+                              )}
+                              {exercise.sets.map((set, setIdx) => (
+                                <div key={setIdx} className="flex gap-4 mb-4 items-center flex-wrap">
+                                  <span className="text-sm text-gray-600 w-16 flex-shrink-0">Set {setIdx + 1}</span>
+                                  <input
+                                    type="number"
+                                    value={set.reps === 0 ? '' : set.reps || ''}
+                                    onChange={(e) => updateSet(exIdx, setIdx, 'reps', e.target.value)}
+                                    className="w-24 px-3 py-2 border border-gray-300 rounded box-border"
+                                    placeholder="Reps"
+                                  />
+                                  <span className="text-sm text-gray-600 flex-shrink-0">reps</span>
+                                  <input
+                                    type="number"
+                                    step="0.1"
+                                    value={set.weight === 0 ? '' : set.weight || ''}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      // Handle empty string
+                                      if (val === '') {
+                                        updateSet(exIdx, setIdx, 'weight', '');
+                                        return;
+                                      }
+                                      // Prevent leading zeros (except for 0.5, 0.1, etc.)
+                                      if (/^0[1-9]/.test(val)) {
+                                        // Remove leading zero from numbers like 01, 02, etc.
+                                        updateSet(exIdx, setIdx, 'weight', val.replace(/^0+/, ''));
+                                      } else {
+                                        updateSet(exIdx, setIdx, 'weight', val);
+                                      }
+                                    }}
+                                    className="w-24 px-3 py-2 border border-gray-300 rounded box-border"
+                                    placeholder="Weight"
+                                  />
+                                  <span className="text-sm text-gray-600 flex-shrink-0">lbs</span>
+                                </div>
+                              ))}
+                              <button
+                                onClick={() => addSet(exIdx)}
+                                className="text-sm text-blue-600 hover:text-blue-700 active:scale-95 mt-4 font-semibold transition cursor-pointer"
+                              >
+                                + Add Set
+                              </button>
+                            </>
+                          )}
                         </div>
-                        <button
-                          onClick={() => {
-                            const updated = { ...currentWorkout };
-                            updated.exercises.splice(exIdx, 1);
-                            setCurrentWorkout(updated);
-                          }}
-                          className="text-black hover:text-red-600 active:scale-95 ml-4 transition cursor-pointer"
-                        >
-                          <X size={18} />
-                        </button>
-                      </div>
-                      {(exercise as WorkoutExercise & { _showInstructions?: boolean })._showInstructions && exercise.instructions && exercise.instructions.length > 0 && (
-                        <div className="mb-4 p-4 bg-gray-50 rounded border border-gray-200">
-                          <p className="text-xs font-semibold text-gray-700 mb-3">Instructions:</p>
-                          <ol className="list-decimal list-inside space-y-2">
-                            {exercise.instructions.map((instruction, idx) => (
-                              <li key={idx} className="text-xs text-gray-600">{instruction}</li>
-                            ))}
-                          </ol>
-                        </div>
-                      )}
-                      {exercise.sets.map((set, setIdx) => (
-                        <div key={setIdx} className="flex gap-4 mb-4 items-center flex-wrap">
-                          <span className="text-sm text-gray-600 w-16 flex-shrink-0">Set {setIdx + 1}</span>
-                          <input
-                            type="number"
-                            value={set.reps === 0 ? '' : set.reps || ''}
-                            onChange={(e) => updateSet(exIdx, setIdx, 'reps', e.target.value)}
-                            className="w-24 px-3 py-2 border border-gray-300 rounded box-border"
-                            placeholder="Reps"
-                          />
-                          <span className="text-sm text-gray-600 flex-shrink-0">reps</span>
-                          <input
-                            type="number"
-                            step="0.1"
-                            value={set.weight === 0 ? '' : set.weight || ''}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              // Handle empty string
-                              if (val === '') {
-                                updateSet(exIdx, setIdx, 'weight', '');
-                                return;
-                              }
-                              // Prevent leading zeros (except for 0.5, 0.1, etc.)
-                              if (/^0[1-9]/.test(val)) {
-                                // Remove leading zero from numbers like 01, 02, etc.
-                                updateSet(exIdx, setIdx, 'weight', val.replace(/^0+/, ''));
-                              } else {
-                                updateSet(exIdx, setIdx, 'weight', val);
-                              }
-                            }}
-                            className="w-24 px-3 py-2 border border-gray-300 rounded box-border"
-                            placeholder="Weight"
-                          />
-                          <span className="text-sm text-gray-600 flex-shrink-0">lbs</span>
-                        </div>
-                      ))}
-                      <button
-                        onClick={() => addSet(exIdx)}
-                        className="text-sm text-blue-600 hover:text-blue-700 active:scale-95 mt-4 font-semibold transition cursor-pointer"
-                      >
-                        + Add Set
-                      </button>
-                    </div>
-                  ))}
+                      );
+                    })}
                   </div>
                 )}
 
@@ -851,85 +985,108 @@ function SavedExerciseCard({
   workoutId, 
   exerciseIndex,
   onUpdateSet,
-  onAddSet
+  onAddSet,
+  onDeleteRequest
 }: { 
   exercise: WorkoutExercise;
   workoutId: number;
   exerciseIndex: number;
   onUpdateSet: (workoutId: number, exerciseIndex: number, setIndex: number, field: 'reps' | 'weight', value: string) => void;
   onAddSet: (workoutId: number, exerciseIndex: number) => void;
+  onDeleteRequest: (workoutId: number, exerciseIndex: number, exerciseName: string) => void;
 }) {
   const [showInstructions, setShowInstructions] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   return (
     <div className="mb-4 last:mb-0 p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
-      <div className="flex items-center gap-3 mb-4">
-        <h4 className="font-semibold text-black">{exercise.name}</h4>
-        {exercise.instructions && exercise.instructions.length > 0 && (
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3 flex-1">
           <button
-            onClick={() => setShowInstructions(!showInstructions)}
-            className="p-2 text-gray-500 hover:text-black active:scale-95 transition cursor-pointer"
-            title="Show instructions"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="p-1 text-gray-500 hover:text-black active:scale-95 transition cursor-pointer"
+            title={isCollapsed ? "Expand exercise" : "Collapse exercise"}
           >
-            <Info size={14} />
+            {isCollapsed ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
           </button>
-        )}
+          <h4 className="font-semibold text-black">{exercise.name}</h4>
+          {exercise.instructions && exercise.instructions.length > 0 && (
+            <button
+              onClick={() => setShowInstructions(!showInstructions)}
+              className="p-2 text-gray-500 hover:text-black active:scale-95 transition cursor-pointer"
+              title="Show instructions"
+            >
+              <Info size={14} />
+            </button>
+          )}
+        </div>
+        <button
+          onClick={() => onDeleteRequest(workoutId, exerciseIndex, exercise.name)}
+          className="text-black hover:text-red-600 active:scale-95 ml-4 transition cursor-pointer"
+          title="Delete exercise"
+        >
+          <Trash2 size={16} />
+        </button>
       </div>
       <p className="text-xs text-gray-600 mb-4">{exercise.category} • {exercise.equipment || 'N/A'}</p>
-      {showInstructions && exercise.instructions && exercise.instructions.length > 0 && (
-        <div className="mb-4 p-4 bg-gray-50 rounded border border-gray-300">
-          <p className="text-xs font-semibold text-black mb-3">Instructions:</p>
-          <ol className="list-decimal list-inside space-y-2">
-            {exercise.instructions.map((instruction, idx) => (
-              <li key={idx} className="text-xs text-gray-700">{instruction}</li>
+      {!isCollapsed && (
+        <>
+          {showInstructions && exercise.instructions && exercise.instructions.length > 0 && (
+            <div className="mb-4 p-4 bg-gray-50 rounded border border-gray-300">
+              <p className="text-xs font-semibold text-black mb-3">Instructions:</p>
+              <ol className="list-decimal list-inside space-y-2">
+                {exercise.instructions.map((instruction, idx) => (
+                  <li key={idx} className="text-xs text-gray-700">{instruction}</li>
+                ))}
+              </ol>
+            </div>
+          )}
+          <div className="space-y-2">
+            {exercise.sets.map((set, setIdx) => (
+              <div key={setIdx} className="flex gap-4 items-center flex-wrap">
+                <span className="text-sm text-gray-600 w-16 flex-shrink-0">Set {setIdx + 1}</span>
+                <input
+                  type="number"
+                  value={set.reps === 0 ? '' : set.reps || ''}
+                  onChange={(e) => onUpdateSet(workoutId, exerciseIndex, setIdx, 'reps', e.target.value)}
+                  className="w-24 px-3 py-2 border border-gray-300 rounded box-border"
+                  placeholder="Reps"
+                />
+                <span className="text-sm text-gray-600 flex-shrink-0">reps</span>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={set.weight === 0 ? '' : set.weight || ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    // Handle empty string
+                    if (val === '') {
+                      onUpdateSet(workoutId, exerciseIndex, setIdx, 'weight', '');
+                      return;
+                    }
+                    // Prevent leading zeros (except for 0.5, 0.1, etc.)
+                    if (/^0[1-9]/.test(val)) {
+                      // Remove leading zero from numbers like 01, 02, etc.
+                      onUpdateSet(workoutId, exerciseIndex, setIdx, 'weight', val.replace(/^0+/, ''));
+                    } else {
+                      onUpdateSet(workoutId, exerciseIndex, setIdx, 'weight', val);
+                    }
+                  }}
+                  className="w-24 px-3 py-2 border border-gray-300 rounded box-border"
+                  placeholder="Weight"
+                />
+                <span className="text-sm text-gray-600 flex-shrink-0">lbs</span>
+              </div>
             ))}
-          </ol>
-        </div>
-      )}
-      <div className="space-y-2">
-        {exercise.sets.map((set, setIdx) => (
-          <div key={setIdx} className="flex gap-4 items-center flex-wrap">
-            <span className="text-sm text-gray-600 w-16 flex-shrink-0">Set {setIdx + 1}</span>
-            <input
-              type="number"
-              value={set.reps === 0 ? '' : set.reps || ''}
-              onChange={(e) => onUpdateSet(workoutId, exerciseIndex, setIdx, 'reps', e.target.value)}
-              className="w-24 px-3 py-2 border border-gray-300 rounded box-border"
-              placeholder="Reps"
-            />
-            <span className="text-sm text-gray-600 flex-shrink-0">reps</span>
-            <input
-              type="number"
-              step="0.1"
-              value={set.weight === 0 ? '' : set.weight || ''}
-              onChange={(e) => {
-                const val = e.target.value;
-                // Handle empty string
-                if (val === '') {
-                  onUpdateSet(workoutId, exerciseIndex, setIdx, 'weight', '');
-                  return;
-                }
-                // Prevent leading zeros (except for 0.5, 0.1, etc.)
-                if (/^0[1-9]/.test(val)) {
-                  // Remove leading zero from numbers like 01, 02, etc.
-                  onUpdateSet(workoutId, exerciseIndex, setIdx, 'weight', val.replace(/^0+/, ''));
-                } else {
-                  onUpdateSet(workoutId, exerciseIndex, setIdx, 'weight', val);
-                }
-              }}
-              className="w-24 px-3 py-2 border border-gray-300 rounded box-border"
-              placeholder="Weight"
-            />
-            <span className="text-sm text-gray-600 flex-shrink-0">lbs</span>
           </div>
-        ))}
-      </div>
-      <button
-        onClick={() => onAddSet(workoutId, exerciseIndex)}
-        className="text-sm text-blue-600 hover:text-blue-700 active:scale-95 mt-4 font-semibold transition cursor-pointer"
-      >
-        + Add Set
-      </button>
+          <button
+            onClick={() => onAddSet(workoutId, exerciseIndex)}
+            className="text-sm text-blue-600 hover:text-blue-700 active:scale-95 mt-4 font-semibold transition cursor-pointer"
+          >
+            + Add Set
+          </button>
+        </>
+      )}
     </div>
   );
 }

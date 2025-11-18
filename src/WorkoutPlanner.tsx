@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Calendar, Plus, X, ChevronDown, ChevronUp, Trash2, Loader, BarChart3, Activity, Info } from 'lucide-react';
+import { Calendar, Plus, X, ChevronDown, ChevronUp, Trash2, BarChart3, Activity, Info, RefreshCw, AlertCircle } from 'lucide-react';
 import type { Workout, Exercise, WorkoutExercise, TimePeriod } from './types/workout';
 import { analyzeMuscleGroups, getUnderworkedMuscles, generateSuggestions } from './utils/workoutAnalysis';
 import BodyHeatmap from './components/BodyHeatmap';
@@ -31,7 +31,7 @@ function ExercisePickerCard({ exercise, onAdd }: { exercise: Exercise; onAdd: ()
           )}
           <button
             onClick={onAdd}
-            className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 active:scale-95 transition cursor-pointer flex items-center gap-2 text-sm font-medium"
+            className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 active:scale-95 transition cursor-pointer flex items-center gap-2 text-sm font-semibold"
             title="Add to workout"
           >
             <Plus size={16} />
@@ -209,10 +209,14 @@ export default function WorkoutPlanner() {
 
   if (loading) {
     return (
-      <div className="max-w-6xl mx-auto p-6 bg-gray-100 min-h-screen flex items-center justify-center">
+      <div className="max-w-6xl mx-auto p-3 md:p-6 bg-gray-50 min-h-screen flex items-center justify-center" style={{ fontFamily: "'Fira Code', monospace" }}>
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=Protest+Guerrilla&family=Fira+Code:wght@400;500;600;700&display=swap');
+          h1, h2, h3, h4, h5, h6 { font-family: 'Protest Guerrilla', sans-serif; }
+        `}</style>
         <div className="text-center">
-          <Loader className="animate-spin text-black mx-auto mb-4" size={48} />
-          <p className="text-gray-700">Loading exercise database...</p>
+          <RefreshCw className="animate-spin text-blue-500 mx-auto mb-4" size={32} />
+          <p className="text-gray-600">Loading exercise database...</p>
         </div>
       </div>
     );
@@ -220,8 +224,13 @@ export default function WorkoutPlanner() {
 
   if (error) {
     return (
-      <div className="max-w-6xl mx-auto p-6 bg-gray-100 min-h-screen flex items-center justify-center">
-        <div className="bg-white border-2 border-black rounded-lg p-6 text-center shadow-lg">
+      <div className="max-w-6xl mx-auto p-3 md:p-6 bg-gray-50 min-h-screen flex items-center justify-center" style={{ fontFamily: "'Fira Code', monospace" }}>
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=Protest+Guerrilla&family=Fira+Code:wght@400;500;600;700&display=swap');
+          h1, h2, h3, h4, h5, h6 { font-family: 'Protest Guerrilla', sans-serif; }
+        `}</style>
+        <div className="bg-white border rounded-lg p-6 text-center shadow-md">
+          <AlertCircle className="text-red-500 mx-auto mb-2" size={24} />
           <p className="text-black font-semibold mb-2">Error Loading Exercises</p>
           <p className="text-gray-700">{error}</p>
         </div>
@@ -230,67 +239,72 @@ export default function WorkoutPlanner() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-6 bg-gray-100 min-h-screen">
-      <div className="bg-white rounded-lg shadow-lg border border-gray-300 p-6 mb-8">
-        <h1 className="text-3xl font-bold text-black mb-4">Workout Analysis</h1>
-        <p className="text-gray-700">Analyze your fitness journey • {exerciseDB.length} exercises available!</p>
-      </div>
-
-      {/* Tab Navigation */}
-      <div className="flex gap-4 mb-8">
-        <button
-          onClick={() => setViewMode('workouts')}
-          className={`flex-1 py-3 px-4 rounded-lg font-medium transition flex items-center justify-center gap-2 border-2 active:scale-95 cursor-pointer ${
-            viewMode === 'workouts'
-              ? 'bg-black text-white border-black'
-              : 'bg-white text-black border-gray-300 hover:bg-gray-50 hover:border-gray-400'
-          }`}
-        >
-          <Activity size={20} />
-          Workouts
-        </button>
-        <button
-          onClick={() => setViewMode('analysis')}
-          className={`flex-1 py-3 px-4 rounded-lg font-medium transition flex items-center justify-center gap-2 border-2 active:scale-95 cursor-pointer ${
-            viewMode === 'analysis'
-              ? 'bg-black text-white border-black'
-              : 'bg-white text-black border-gray-300 hover:bg-gray-50 hover:border-gray-400'
-          }`}
-        >
-          <BarChart3 size={20} />
-          Analysis
-        </button>
+    <div className="min-h-screen bg-gray-50 p-3 md:p-6" style={{ fontFamily: "'Fira Code', monospace" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Protest+Guerrilla&family=Fira+Code:wght@400;500;600;700&display=swap');
+        h1, h2, h3, h4, h5, h6 { font-family: 'Protest Guerrilla', sans-serif; }
+      `}</style>
+      <div className="max-w-6xl mx-auto">
+      <div className="mb-6">
+        <div className="flex justify-between items-start mb-2">
+          <h1 className="text-2xl md:text-3xl font-bold">Workout Analysis</h1>
+        </div>
+        <div className="flex gap-2 flex-wrap mb-4">
+          <button
+            onClick={() => setViewMode('workouts')}
+            className={`px-4 py-2 rounded font-semibold text-sm transition-all ${
+              viewMode === 'workouts'
+                ? 'bg-blue-500 text-white'
+                : 'bg-white text-gray-700 border'
+            }`}
+          >
+            <Activity size={16} className="inline mr-2" />
+            Workouts
+          </button>
+          <button
+            onClick={() => setViewMode('analysis')}
+            className={`px-4 py-2 rounded font-semibold text-sm transition-all ${
+              viewMode === 'analysis'
+                ? 'bg-blue-500 text-white'
+                : 'bg-white text-gray-700 border'
+            }`}
+          >
+            <BarChart3 size={16} className="inline mr-2" />
+            Analysis
+          </button>
+        </div>
+        <p className="text-sm text-gray-600 mb-4">Analyze your fitness journey • {exerciseDB.length} exercises available!</p>
       </div>
 
       {/* Clear All Confirmation Modal */}
       {showClearConfirm && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 p-4 overflow-y-auto" 
           onClick={() => setShowClearConfirm(false)}
         >
           <div 
-            className="bg-white rounded-lg shadow-2xl border-2 border-black p-8 w-full max-w-md mx-auto" 
+            className="bg-white w-full md:w-96 rounded-lg p-4 md:p-6 my-4 shadow-md" 
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mb-6">
-              <h3 className="text-2xl font-bold text-black mb-4">Clear All Workouts?</h3>
-              <div className="h-1 w-12 bg-black rounded-full"></div>
+            <div className="flex items-center gap-3 mb-4">
+              <AlertCircle size={24} className="text-red-500" />
+              <h3 className="text-lg font-bold">Confirm Delete</h3>
             </div>
-            <p className="text-gray-700 mb-8 leading-relaxed">
-              This will permanently delete all <span className="font-semibold text-black">{workouts.length}</span> workout{workouts.length === 1 ? '' : 's'}. This action cannot be undone.
+            <p className="text-gray-700 mb-6">
+              Are you sure you want to delete all <span className="font-semibold">{workouts.length}</span> workout{workouts.length === 1 ? '' : 's'}? This cannot be undone.
             </p>
-            <div className="flex gap-4">
+            <div className="flex gap-3">
               <button
                 onClick={() => setShowClearConfirm(false)}
-                className="flex-1 bg-gray-200 text-gray-800 py-4 px-6 rounded-lg hover:bg-gray-300 active:scale-95 transition cursor-pointer font-medium border-2 border-gray-300"
+                className="flex-1 bg-gray-300 text-gray-800 py-2 px-4 rounded font-semibold text-sm hover:bg-gray-400"
               >
                 Cancel
               </button>
               <button
                 onClick={clearAllWorkouts}
-                className="flex-1 bg-red-600 text-white py-4 px-6 rounded-lg hover:bg-red-700 active:scale-95 transition cursor-pointer font-medium border-2 border-red-700 shadow-lg"
+                className="flex-1 bg-red-500 text-white py-2 px-4 rounded font-semibold text-sm hover:bg-red-600"
               >
-                Clear All
+                Delete
               </button>
             </div>
           </div>
@@ -304,17 +318,17 @@ export default function WorkoutPlanner() {
               <div className="flex gap-4 mb-8">
                 <button
                   onClick={startNewWorkout}
-                  className="flex-1 bg-black text-white py-4 px-6 rounded-lg flex items-center justify-center gap-3 hover:bg-gray-800 active:scale-95 transition border-2 border-black shadow-lg cursor-pointer"
+                  className="flex-1 bg-blue-500 text-white py-2 px-4 rounded font-semibold flex items-center justify-center gap-2 hover:bg-blue-600"
                 >
-                  <Plus size={20} />
+                  <Plus size={18} />
                   Start New Workout
                 </button>
                 {workouts.length > 0 && (
                   <button
                     onClick={() => setShowClearConfirm(true)}
-                    className="bg-red-600 text-white py-4 px-6 rounded-lg flex items-center justify-center gap-3 hover:bg-red-700 active:scale-95 transition border-2 border-red-700 shadow-lg cursor-pointer"
+                    className="bg-red-500 text-white py-2 px-4 rounded font-semibold flex items-center justify-center gap-2 hover:bg-red-600"
                   >
-                    <Trash2 size={20} />
+                    <Trash2 size={18} />
                     Clear All
                   </button>
                 )}
@@ -322,7 +336,7 @@ export default function WorkoutPlanner() {
 
               <div className="space-y-6">
                 {workouts.length === 0 ? (
-                  <div className="bg-white rounded-lg shadow-lg border border-gray-300 p-8 text-center text-gray-600">
+                  <div className="bg-white rounded-lg shadow-md border border-gray-200 p-8 text-center text-gray-600">
                     <p>No workouts yet. Start your first workout above!</p>
                   </div>
                 ) : (() => {
@@ -364,9 +378,9 @@ export default function WorkoutPlanner() {
                             
                             {/* Workouts for this day */}
                             {dayWorkouts.map((workout, workoutIndex) => (
-                              <div key={workout.id} className="bg-white rounded-lg shadow-lg border border-gray-300 overflow-hidden ml-8">
+                              <div key={workout.id} className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden ml-8">
                                 <div 
-                                  className="p-6 flex justify-between items-center cursor-pointer hover:bg-gray-50 active:scale-[0.98] transition"
+                                  className="p-4 md:p-6 flex justify-between items-center cursor-pointer hover:bg-gray-50 active:scale-[0.98] transition"
                                   onClick={() => setExpandedWorkout(expandedWorkout === workout.id ? null : workout.id)}
                                 >
                                   <div className="flex items-center gap-4">
@@ -411,35 +425,35 @@ export default function WorkoutPlanner() {
               </div>
             </>
           ) : (
-            <div className="bg-white rounded-lg shadow-lg border border-gray-300 p-6 overflow-x-hidden">
-              <div className="mb-8">
-                <div className="flex items-end gap-4 mb-8">
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium text-black mb-4">Workout Date</label>
-                    <input
-                      type="date"
-                      value={currentWorkout.date}
-                      onChange={(e) => setCurrentWorkout({ ...currentWorkout, date: e.target.value })}
-                      className="w-full max-w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black box-border"
-                    />
-                  </div>
-                  <div className="flex gap-4">
-                    <button
-                      onClick={() => setCurrentWorkout(null)}
-                      className="bg-gray-200 text-gray-800 py-4 px-6 rounded-lg hover:bg-gray-300 active:scale-95 transition cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={saveWorkout}
-                      disabled={currentWorkout.exercises.length === 0}
-                      className="bg-black text-white py-4 px-6 rounded-lg hover:bg-gray-800 active:scale-95 transition disabled:bg-gray-400 disabled:cursor-not-allowed disabled:active:scale-100 border-2 border-black cursor-pointer"
-                    >
-                      Save Workout
-                    </button>
-                  </div>
-                </div>
+            <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4 md:p-6 overflow-x-hidden">
+          <div className="mb-8">
+            <div className="flex items-end gap-4 mb-8">
+              <div className="flex-1">
+                <label className="block text-sm font-semibold mb-1">Workout Date</label>
+                <input
+                  type="date"
+                  value={currentWorkout.date}
+                  onChange={(e) => setCurrentWorkout({ ...currentWorkout, date: e.target.value })}
+                  className="w-full max-w-full px-3 py-2 border rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
               </div>
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setCurrentWorkout(null)}
+                  className="bg-gray-300 text-gray-800 py-2 px-4 rounded font-semibold text-sm hover:bg-gray-400 active:scale-95 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveWorkout}
+                  disabled={currentWorkout.exercises.length === 0}
+                  className="bg-green-500 text-white py-2 px-4 rounded font-semibold text-sm hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed active:scale-95 transition"
+                >
+                  Save Workout
+                </button>
+              </div>
+            </div>
+          </div>
 
               <div className="mb-8">
                 {/* Added exercises - shown first, right below search */}
@@ -449,7 +463,7 @@ export default function WorkoutPlanner() {
                       <h4 className="text-sm font-semibold text-black uppercase tracking-wide">Added Exercises</h4>
                     </div>
                     {currentWorkout.exercises.map((exercise, exIdx) => (
-                    <div key={exIdx} className="p-6 bg-white rounded-lg border-2 border-black shadow-sm overflow-x-hidden">
+                    <div key={exIdx} className="p-4 md:p-6 bg-white rounded-lg border border-gray-200 shadow-sm overflow-x-hidden">
                       <div className="flex justify-between items-start mb-4">
                         <div className="flex-1">
                           <div className="flex items-center gap-3">
@@ -516,7 +530,7 @@ export default function WorkoutPlanner() {
                       ))}
                       <button
                         onClick={() => addSet(exIdx)}
-                        className="text-sm text-black hover:text-gray-700 active:scale-95 mt-4 font-medium transition cursor-pointer"
+                        className="text-sm text-blue-600 hover:text-blue-700 active:scale-95 mt-4 font-semibold transition cursor-pointer"
                       >
                         + Add Set
                       </button>
@@ -526,16 +540,16 @@ export default function WorkoutPlanner() {
                 )}
 
                 {/* Always-visible search bar */}
-                <div className="mb-8 p-6 bg-gray-50 rounded-lg border border-gray-200 overflow-x-hidden">
-                  <div className="border-t-2 border-b-2 border-gray-400 py-3 mb-4">
-                    <h4 className="text-xs font-semibold text-black uppercase tracking-wide">Search</h4>
+                <div className="mb-8 p-4 md:p-6 bg-gray-50 rounded-lg border border-gray-200 overflow-x-hidden">
+                  <div className="mb-4">
+                    <h4 className="text-xs font-semibold text-black uppercase tracking-wide mb-3">Search</h4>
                   </div>
                   <input
                     type="text"
                     placeholder="Search exercises..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full max-w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-black focus:border-black box-border"
+                    className="w-full max-w-full px-3 py-2 border rounded text-sm mb-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                   <div className="mb-6">
                     <div className="flex items-center gap-4 flex-wrap">
@@ -544,10 +558,10 @@ export default function WorkoutPlanner() {
                         <button
                           key={cat}
                           onClick={() => setSelectedCategory(cat)}
-                          className={`px-4 py-2 rounded-full text-sm transition active:scale-95 cursor-pointer ${
+                          className={`px-4 py-2 rounded-full text-sm transition active:scale-95 cursor-pointer font-semibold ${
                             selectedCategory === cat
-                              ? 'bg-black text-white border-2 border-black'
-                              : 'bg-white text-black hover:bg-gray-100 border-2 border-gray-300'
+                              ? 'bg-blue-500 text-white'
+                              : 'bg-white text-gray-700 border hover:bg-gray-50'
                           }`}
                         >
                           {cat}
@@ -590,15 +604,15 @@ export default function WorkoutPlanner() {
       ) : (
         <div className="space-y-8">
           {!hasAnalysisData ? (
-            <div className="bg-white rounded-lg shadow-lg border border-gray-300 p-8 text-center">
+            <div className="bg-white rounded-lg shadow-md border border-gray-200 p-8 text-center">
               <p className="text-gray-700 mb-4">No workout data available for the selected time period.</p>
               <p className="text-sm text-gray-600">Start logging workouts to see your analysis!</p>
             </div>
           ) : (
             <>
               {/* Time Period Selector */}
-              <div className="bg-white rounded-lg shadow-lg border border-gray-300 p-6">
-                <label className="block text-sm font-medium text-black mb-4">
+              <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4 md:p-6">
+                <label className="block text-sm font-semibold mb-4">
                   Analysis Period
                 </label>
                 <div className="flex gap-4">
@@ -606,10 +620,10 @@ export default function WorkoutPlanner() {
                     <button
                       key={period}
                       onClick={() => setTimePeriod(period)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition active:scale-95 cursor-pointer ${
+                      className={`px-4 py-2 rounded font-semibold text-sm transition active:scale-95 cursor-pointer ${
                         timePeriod === period
-                          ? 'bg-black text-white border-2 border-black'
-                          : 'bg-white text-black border-2 border-gray-300 hover:bg-gray-50'
+                          ? 'bg-purple-500 text-white'
+                          : 'bg-white text-gray-700 border hover:bg-gray-50'
                       }`}
                     >
                       Last {period} Days
@@ -631,6 +645,7 @@ export default function WorkoutPlanner() {
           )}
         </div>
       )}
+      </div>
     </div>
   );
 }
@@ -640,7 +655,7 @@ function SavedExerciseCard({ exercise }: { exercise: WorkoutExercise }) {
   const [showInstructions, setShowInstructions] = useState(false);
 
   return (
-    <div className="mb-4 last:mb-0 p-4 bg-white rounded border border-gray-200">
+    <div className="mb-4 last:mb-0 p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
       <div className="flex items-center gap-3 mb-4">
         <h4 className="font-semibold text-black">{exercise.name}</h4>
         {exercise.instructions && exercise.instructions.length > 0 && (

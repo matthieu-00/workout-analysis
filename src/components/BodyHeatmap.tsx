@@ -84,7 +84,7 @@ export default function BodyHeatmap({ stats, timePeriod, onMuscleHover }: BodyHe
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6 border border-gray-200 h-full flex flex-col">
+    <div className="bg-white rounded-lg shadow-md p-4 md:p-6 border border-gray-200 h-full flex flex-col">
       <div className="mb-6">
         <h3 className="text-xl font-semibold text-black mb-4">Muscle Group Heatmap</h3>
         
@@ -114,20 +114,20 @@ export default function BodyHeatmap({ stats, timePeriod, onMuscleHover }: BodyHe
         <div className="flex gap-4">
           <button
             onClick={() => setView('anterior')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition active:scale-95 cursor-pointer ${
+            className={`px-4 py-2 rounded font-semibold text-sm transition active:scale-95 cursor-pointer ${
               view === 'anterior'
-                ? 'bg-black text-white border-2 border-black'
-                : 'bg-white text-black border-2 border-gray-300 hover:bg-gray-50'
+                ? 'bg-blue-500 text-white'
+                : 'bg-white text-gray-700 border hover:bg-gray-50'
             }`}
           >
             Front
           </button>
           <button
             onClick={() => setView('posterior')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition active:scale-95 cursor-pointer ${
+            className={`px-4 py-2 rounded font-semibold text-sm transition active:scale-95 cursor-pointer ${
               view === 'posterior'
-                ? 'bg-black text-white border-2 border-black'
-                : 'bg-white text-black border-2 border-gray-300 hover:bg-gray-50'
+                ? 'bg-blue-500 text-white'
+                : 'bg-white text-gray-700 border hover:bg-gray-50'
             }`}
           >
             Back
@@ -154,24 +154,24 @@ export default function BodyHeatmap({ stats, timePeriod, onMuscleHover }: BodyHe
       
       {/* Selected muscle info - more prominent below heatmap */}
       {selectedMuscle && (
-        <div className="mt-6 p-6 bg-gray-100 border-2 border-black rounded-lg relative">
+        <div className="mt-6 p-4 md:p-6 bg-blue-50 border border-blue-200 rounded-lg relative">
           <button
             onClick={() => setSelectedMuscle(null)}
-            className="absolute top-4 right-4 text-black hover:text-red-600 active:scale-95 p-2 transition z-10 bg-white rounded cursor-pointer"
+            className="absolute top-4 right-4 text-gray-600 hover:text-red-600 active:scale-95 p-2 transition z-10 bg-white rounded cursor-pointer"
             title="Close"
           >
             <X size={20} />
           </button>
           <div className="pr-12">
-            <h4 className="text-lg font-bold text-black capitalize mb-4">
+            <h4 className="text-lg font-bold text-blue-900 capitalize mb-4">
               {selectedMuscle.muscleGroup}
             </h4>
-            <p className="text-sm text-gray-700 mb-2">
+            <p className="text-sm text-blue-900 mb-2">
               <span className="font-semibold">Exercise Frequency:</span>{' '}
               {selectedMuscle.stat.workouts} {selectedMuscle.stat.workouts === 1 ? 'exercise' : 'exercises'} in the last {timePeriod} days
             </p>
             {selectedMuscle.stat.lastWorkedDate && (
-              <p className="text-xs text-gray-600 mt-2">
+              <p className="text-xs text-blue-700 mt-2">
                 Last worked: {new Date(selectedMuscle.stat.lastWorkedDate).toLocaleDateString()}
               </p>
             )}

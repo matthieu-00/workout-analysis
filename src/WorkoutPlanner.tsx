@@ -68,7 +68,6 @@ export default function WorkoutPlanner() {
   const [timePeriod, setTimePeriod] = useState<TimePeriod>(7);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [editingWorkoutId, setEditingWorkoutId] = useState<number | null>(null);
-  const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
   const [addExerciseSearchTerm, setAddExerciseSearchTerm] = useState('');
   const [addExerciseCategory, setAddExerciseCategory] = useState('all');
 
@@ -157,9 +156,7 @@ export default function WorkoutPlanner() {
     );
     
     setWorkouts(updatedWorkouts);
-    setShowAddExerciseModal(false);
-    setAddExerciseSearchTerm('');
-    setAddExerciseCategory('all');
+    // Keep search open for multiple additions
   };
 
   const filteredExercisesForAdd = useMemo(() => {
@@ -174,8 +171,16 @@ export default function WorkoutPlanner() {
     if (!currentWorkout) return;
     
     const updated = { ...currentWorkout };
-    const numValue = field === 'reps' ? parseInt(value) || 0 : parseFloat(value) || 0;
-    updated.exercises[exerciseIndex].sets[setIndex][field] = numValue;
+    // Handle empty string - store as 0 for number fields
+    if (value === '' || value === '-') {
+      updated.exercises[exerciseIndex].sets[setIndex][field] = 0;
+    } else {
+      const numValue = field === 'reps' ? parseInt(value, 10) : parseFloat(value);
+      // Only update if valid number
+      if (!isNaN(numValue) && isFinite(numValue)) {
+        updated.exercises[exerciseIndex].sets[setIndex][field] = numValue;
+      }
+    }
     setCurrentWorkout(updated);
   };
 
@@ -186,6 +191,40 @@ export default function WorkoutPlanner() {
     const lastSet = updated.exercises[exerciseIndex].sets.slice(-1)[0];
     updated.exercises[exerciseIndex].sets.push({ ...lastSet });
     setCurrentWorkout(updated);
+  };
+
+  const updateSetInWorkout = (workoutId: number, exerciseIndex: number, setIndex: number, field: 'reps' | 'weight', value: string) => {
+    const updatedWorkouts = workouts.map(w => {
+      if (w.id === workoutId) {
+        const updated = { ...w };
+        // Handle empty string - store as 0 for number fields
+        if (value === '' || value === '-') {
+          updated.exercises[exerciseIndex].sets[setIndex][field] = 0;
+        } else {
+          const numValue = field === 'reps' ? parseInt(value, 10) : parseFloat(value);
+          // Only update if valid number
+          if (!isNaN(numValue) && isFinite(numValue)) {
+            updated.exercises[exerciseIndex].sets[setIndex][field] = numValue;
+          }
+        }
+        return updated;
+      }
+      return w;
+    });
+    setWorkouts(updatedWorkouts);
+  };
+
+  const addSetToWorkout = (workoutId: number, exerciseIndex: number) => {
+    const updatedWorkouts = workouts.map(w => {
+      if (w.id === workoutId) {
+        const updated = { ...w };
+        const lastSet = updated.exercises[exerciseIndex].sets.slice(-1)[0];
+        updated.exercises[exerciseIndex].sets.push({ ...lastSet });
+        return updated;
+      }
+      return w;
+    });
+    setWorkouts(updatedWorkouts);
   };
 
   const saveWorkout = () => {
@@ -446,25 +485,106 @@ export default function WorkoutPlanner() {
                                 
                                 {expandedWorkout === workout.id && (
                                   <div className="p-6 bg-gradient-to-br from-gray-50 to-blue-50 border-t border-blue-200">
-                                    <div className="mb-4">
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setEditingWorkoutId(workout.id);
-                                          setShowAddExerciseModal(true);
-                                        }}
-                                        className="bg-green-500 text-white px-4 py-2 rounded-lg font-semibold text-sm hover:bg-green-600 shadow-md hover:shadow-lg transition-all flex items-center gap-2 active:scale-95"
-                                      >
-                                        <Plus size={16} />
-                                        Add Exercise
-                                      </button>
-                                    </div>
+                                    {editingWorkoutId === workout.id ? (
+                                      <>
+                                        {/* Inline Search UX - Same as new workout */}
+                                        <div className="mb-6 p-4 md:p-6 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border-2 border-blue-200 overflow-x-hidden shadow-md">
+                                          <div className="mb-4">
+                                            <div className="flex items-center justify-between mb-3">
+                                              <div className="flex items-center gap-2">
+                                                <div className="h-1 w-8 bg-blue-500 rounded-full"></div>
+                                                <h4 className="text-xs font-bold text-blue-800 uppercase tracking-wide">Search Exercises</h4>
+                                              </div>
+                                              <button
+                                                onClick={() => {
+                                                  setEditingWorkoutId(null);
+                                                  setAddExerciseSearchTerm('');
+                                                  setAddExerciseCategory('all');
+                                                }}
+                                                className="bg-gray-500 text-white px-4 py-2 rounded-lg font-semibold text-sm hover:bg-gray-600 active:scale-95 transition"
+                                              >
+                                                Done
+                                              </button>
+                                            </div>
+                                          </div>
+                                          <input
+                                            type="text"
+                                            placeholder="Search exercises..."
+                                            value={addExerciseSearchTerm}
+                                            onChange={(e) => setAddExerciseSearchTerm(e.target.value)}
+                                            className="w-full max-w-full px-3 py-2 border rounded text-sm mb-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                          />
+                                          <div className="mb-6">
+                                            <div className="flex items-center gap-4 flex-wrap">
+                                              <span className="text-sm font-medium text-black">Filters: </span>
+                                              {categories.map(cat => (
+                                                <button
+                                                  key={cat}
+                                                  onClick={() => setAddExerciseCategory(cat)}
+                                                  className={`px-4 py-2 rounded-full text-sm transition active:scale-95 cursor-pointer font-semibold ${
+                                                    addExerciseCategory === cat
+                                                      ? 'bg-blue-500 text-white'
+                                                      : 'bg-white text-gray-700 border hover:bg-gray-50'
+                                                  }`}
+                                                >
+                                                  {cat}
+                                                </button>
+                                              ))}
+                                            </div>
+                                          </div>
+                                          {filteredExercisesForAdd.length > 0 && (
+                                            <>
+                                              <h3 className="text-lg font-semibold text-black mb-4">Exercises</h3>
+                                              <div className="max-h-60 overflow-y-auto space-y-4">
+                                                {filteredExercisesForAdd.slice(0, 50).map((ex, idx) => (
+                                                  <ExercisePickerCard
+                                                    key={`add-${ex.name}-${ex.category}-${idx}`}
+                                                    exercise={ex}
+                                                    onAdd={() => addExerciseToWorkout(workout.id, ex)}
+                                                  />
+                                                ))}
+                                              </div>
+                                            </>
+                                          )}
+                                          {filteredExercisesForAdd.length === 0 && addExerciseSearchTerm && (
+                                            <>
+                                              <h3 className="text-lg font-semibold text-black mb-4">Exercises</h3>
+                                              <p className="text-center text-gray-500 py-8">No exercises found</p>
+                                            </>
+                                          )}
+                                          {!addExerciseSearchTerm && (
+                                            <p className="text-center text-gray-500 py-8 text-sm">Start typing to search for exercises</p>
+                                          )}
+                                        </div>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <div className="mb-4">
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setEditingWorkoutId(workout.id);
+                                            }}
+                                            className="bg-green-500 text-white px-4 py-2 rounded-lg font-semibold text-sm hover:bg-green-600 shadow-md hover:shadow-lg transition-all flex items-center gap-2 active:scale-95"
+                                          >
+                                            <Plus size={16} />
+                                            Add Exercise
+                                          </button>
+                                        </div>
+                                      </>
+                                    )}
                                     {workout.exercises.map((exercise, idx) => (
                                       <div key={idx} className="mb-4 last:mb-0">
-                                        <SavedExerciseCard exercise={exercise} />
+                                        <SavedExerciseCard 
+                                          exercise={exercise}
+                                          workoutId={workout.id}
+                                          exerciseIndex={idx}
+                                          onUpdateSet={updateSetInWorkout}
+                                          onAddSet={addSetToWorkout}
+                                        />
                                       </div>
                                     ))}
-                                    {workout.exercises.length === 0 && (
+                                    {workout.exercises.length === 0 && editingWorkoutId !== workout.id && (
                                       <p className="text-gray-500 text-center py-4">No exercises yet. Click "Add Exercise" to get started.</p>
                                     )}
                                   </div>
@@ -568,7 +688,7 @@ export default function WorkoutPlanner() {
                           <span className="text-sm text-gray-600 w-16 flex-shrink-0">Set {setIdx + 1}</span>
                           <input
                             type="number"
-                            value={set.reps}
+                            value={set.reps === 0 ? '' : set.reps || ''}
                             onChange={(e) => updateSet(exIdx, setIdx, 'reps', e.target.value)}
                             className="w-24 px-3 py-2 border border-gray-300 rounded box-border"
                             placeholder="Reps"
@@ -576,8 +696,23 @@ export default function WorkoutPlanner() {
                           <span className="text-sm text-gray-600 flex-shrink-0">reps</span>
                           <input
                             type="number"
-                            value={set.weight}
-                            onChange={(e) => updateSet(exIdx, setIdx, 'weight', e.target.value)}
+                            step="0.1"
+                            value={set.weight === 0 ? '' : set.weight || ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              // Handle empty string
+                              if (val === '') {
+                                updateSet(exIdx, setIdx, 'weight', '');
+                                return;
+                              }
+                              // Prevent leading zeros (except for 0.5, 0.1, etc.)
+                              if (/^0[1-9]/.test(val)) {
+                                // Remove leading zero from numbers like 01, 02, etc.
+                                updateSet(exIdx, setIdx, 'weight', val.replace(/^0+/, ''));
+                              } else {
+                                updateSet(exIdx, setIdx, 'weight', val);
+                              }
+                            }}
                             className="w-24 px-3 py-2 border border-gray-300 rounded box-border"
                             placeholder="Weight"
                           />
@@ -705,93 +840,25 @@ export default function WorkoutPlanner() {
         </div>
       )}
 
-      {/* Add Exercise Modal for Existing Workouts */}
-      {showAddExerciseModal && editingWorkoutId && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 p-4 overflow-y-auto" 
-          onClick={() => {
-            setShowAddExerciseModal(false);
-            setEditingWorkoutId(null);
-            setAddExerciseSearchTerm('');
-            setAddExerciseCategory('all');
-          }}
-        >
-          <div 
-            className="bg-white w-full md:w-[600px] rounded-lg shadow-xl p-4 md:p-6 my-4 max-h-[90vh] overflow-y-auto" 
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <h3 className="text-xl font-bold text-gray-900">Add Exercise to Workout</h3>
-                <p className="text-sm text-gray-600 mt-1">Search and select exercises to add</p>
-              </div>
-              <button
-                onClick={() => {
-                  setShowAddExerciseModal(false);
-                  setEditingWorkoutId(null);
-                  setAddExerciseSearchTerm('');
-                  setAddExerciseCategory('all');
-                }}
-                className="p-2 hover:bg-gray-200 rounded-lg transition"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="mb-6">
-              <input
-                type="text"
-                placeholder="Search exercises..."
-                value={addExerciseSearchTerm}
-                onChange={(e) => setAddExerciseSearchTerm(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-blue-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-
-            <div className="mb-6">
-              <div className="flex items-center gap-4 flex-wrap">
-                <span className="text-sm font-semibold text-gray-700">Filters: </span>
-                {categories.map(cat => (
-                  <button
-                    key={cat}
-                    onClick={() => setAddExerciseCategory(cat)}
-                    className={`px-4 py-2 rounded-full text-sm transition active:scale-95 cursor-pointer font-semibold ${
-                      addExerciseCategory === cat
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-white text-gray-700 border hover:bg-gray-50'
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {filteredExercisesForAdd.length > 0 ? (
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {filteredExercisesForAdd.slice(0, 50).map((ex, idx) => (
-                  <ExercisePickerCard
-                    key={`add-${ex.name}-${ex.category}-${idx}`}
-                    exercise={ex}
-                    onAdd={() => addExerciseToWorkout(editingWorkoutId, ex)}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12 text-gray-500">
-                <p>No exercises found matching your search.</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
       </div>
     </div>
   );
 }
 
-// Saved exercise card component with instructions
-function SavedExerciseCard({ exercise }: { exercise: WorkoutExercise }) {
+// Saved exercise card component with instructions and editable sets
+function SavedExerciseCard({ 
+  exercise, 
+  workoutId, 
+  exerciseIndex,
+  onUpdateSet,
+  onAddSet
+}: { 
+  exercise: WorkoutExercise;
+  workoutId: number;
+  exerciseIndex: number;
+  onUpdateSet: (workoutId: number, exerciseIndex: number, setIndex: number, field: 'reps' | 'weight', value: string) => void;
+  onAddSet: (workoutId: number, exerciseIndex: number) => void;
+}) {
   const [showInstructions, setShowInstructions] = useState(false);
 
   return (
@@ -821,11 +888,48 @@ function SavedExerciseCard({ exercise }: { exercise: WorkoutExercise }) {
       )}
       <div className="space-y-2">
         {exercise.sets.map((set, setIdx) => (
-          <p key={setIdx} className="text-sm text-gray-700">
-            Set {setIdx + 1}: {set.reps} reps × {set.weight} lbs
-          </p>
+          <div key={setIdx} className="flex gap-4 items-center flex-wrap">
+            <span className="text-sm text-gray-600 w-16 flex-shrink-0">Set {setIdx + 1}</span>
+            <input
+              type="number"
+              value={set.reps === 0 ? '' : set.reps || ''}
+              onChange={(e) => onUpdateSet(workoutId, exerciseIndex, setIdx, 'reps', e.target.value)}
+              className="w-24 px-3 py-2 border border-gray-300 rounded box-border"
+              placeholder="Reps"
+            />
+            <span className="text-sm text-gray-600 flex-shrink-0">reps</span>
+            <input
+              type="number"
+              step="0.1"
+              value={set.weight === 0 ? '' : set.weight || ''}
+              onChange={(e) => {
+                const val = e.target.value;
+                // Handle empty string
+                if (val === '') {
+                  onUpdateSet(workoutId, exerciseIndex, setIdx, 'weight', '');
+                  return;
+                }
+                // Prevent leading zeros (except for 0.5, 0.1, etc.)
+                if (/^0[1-9]/.test(val)) {
+                  // Remove leading zero from numbers like 01, 02, etc.
+                  onUpdateSet(workoutId, exerciseIndex, setIdx, 'weight', val.replace(/^0+/, ''));
+                } else {
+                  onUpdateSet(workoutId, exerciseIndex, setIdx, 'weight', val);
+                }
+              }}
+              className="w-24 px-3 py-2 border border-gray-300 rounded box-border"
+              placeholder="Weight"
+            />
+            <span className="text-sm text-gray-600 flex-shrink-0">lbs</span>
+          </div>
         ))}
       </div>
+      <button
+        onClick={() => onAddSet(workoutId, exerciseIndex)}
+        className="text-sm text-blue-600 hover:text-blue-700 active:scale-95 mt-4 font-semibold transition cursor-pointer"
+      >
+        + Add Set
+      </button>
     </div>
   );
 }

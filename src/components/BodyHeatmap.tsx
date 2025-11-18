@@ -84,7 +84,7 @@ export default function BodyHeatmap({ stats, timePeriod, onMuscleHover }: BodyHe
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-4 md:p-6 border border-gray-200 h-full flex flex-col">
+    <div className="bg-white rounded-lg shadow-md p-4 md:p-6 border border-gray-200 flex flex-col">
       <div className="mb-6">
         <h3 className="text-xl font-semibold text-black mb-4">Muscle Group Heatmap</h3>
         
@@ -135,8 +135,8 @@ export default function BodyHeatmap({ stats, timePeriod, onMuscleHover }: BodyHe
         </div>
       </div>
       
-      <div className="flex flex-col items-center justify-center mb-6 flex-1 min-h-0">
-        <div className="relative w-full max-w-full" style={{ maxHeight: '100%' }}>
+      <div className="flex flex-col items-center justify-start mb-6">
+        <div className="relative w-full max-w-full">
           <div className="w-full flex justify-center" style={{ maxWidth: '100%', height: 'auto' }}>
             <Model
               // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -961,8 +961,8 @@ export default function WorkoutPlanner() {
               </div>
 
               {/* Heatmap and Suggestions Side by Side */}
-              <div className="flex flex-col md:flex-row gap-6">
-                <div className="flex-1 min-w-0">
+              <div className="flex flex-col md:flex-row gap-6 items-start">
+                <div className="flex-1 min-w-0 self-start">
                   <BodyHeatmap stats={muscleStats} timePeriod={timePeriod} />
                 </div>
                 <div className="flex-1 min-w-0">
